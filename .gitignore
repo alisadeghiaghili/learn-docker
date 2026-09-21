@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+.DS_Store
+*.local
+.vite
+coverage
+tsconfig.tsbuildinfo
+AGENTS.md
+DESIGN.md
