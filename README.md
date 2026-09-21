@@ -3,6 +3,8 @@
 Interactive Docker visualizer, sandbox, and tutorial game.
 Product pattern inspired by [learnGitBranching](https://github.com/pcottle/learnGitBranching) — rebuilt for containers.
 
+**Live:** https://alisadeghiaghili.github.io/learn-docker/
+
 Type Docker CLI commands in a terminal. A simulated daemon updates a multi-zone schematic (registry, image layers, containers, volumes, networks). Guided levels teach the mental models that the real CLI leaves invisible.
 
 ## Quick start
@@ -19,6 +21,19 @@ npm test
 npm run build
 npm run preview
 ```
+
+## GitHub Pages
+
+Pushes to `main` deploy automatically via `.github/workflows/deploy-pages.yml`:
+tests run, Vite builds with `base: /learn-docker/`, and the `dist/` folder is published.
+
+Production build locally:
+
+```bash
+GITHUB_PAGES=true npm run build
+```
+
+Then serve `dist/` from any static host (or open via Pages URL after deploy).
 
 ## What works
 
