@@ -16,6 +16,7 @@ import {
   loadProgress,
   recordSolve,
 } from '../engine/session';
+import { QUIZZES, quizzesForLevel } from '../levels';
 import type { LogLine } from './Terminal';
 
 export type AppMode = 'sandbox' | 'level';
@@ -374,6 +375,53 @@ function handleSubmit(state: AppState, rawInput: string): AppState {
     return {
       ...state,
       lines: pushLines([...state.lines, lineIn], lines, 'out'),
+      focusToken,
+    };
+  }
+  if (input === 'quiz' || input.startsWith('quiz ')) {
+    const level = currentLevel(state);
+    const q = level?.quiz?.length ? quizzesForLevel(level)[0] : QUIZZES[0];
+    if (!q) {
+      return {
+        ...state,
+        lines: pushLines([...state.lines, lineIn], ['No quiz available yet.'], 'out'),
+        focusToken,
+      };
+    }
+    const answer = input.slice(4).trim().toUpperCase();
+    if (!answer) {
+      return {
+        ...state,
+        lines: pushLines(
+          [...state.lines, lineIn],
+          [
+            `Q: ${q.question}`,
+            `  A) ${q.choices[0]}`,
+            `  B) ${q.choices[1]}`,
+            `  C) ${q.choices[2]}`,
+            'Answer with: quiz A | quiz B | quiz C',
+          ],
+          'out',
+        ),
+        focusToken,
+      };
+    }
+    const idx = answer === 'A' ? 0 : answer === 'B' ? 1 : answer === 'C' ? 2 : -1;
+    if (idx < 0) {
+      return {
+        ...state,
+        lines: pushLines([...state.lines, lineIn], ['Usage: quiz A | quiz B | quiz C'], 'err'),
+        focusToken,
+      };
+    }
+    const correct = idx === q.correct;
+    return {
+      ...state,
+      lines: pushLines(
+        [...state.lines, lineIn],
+        [correct ? 'Correct.' : `Not quite. Best answer: ${['A', 'B', 'C'][q.correct]}`, q.explain],
+        correct ? 'ok' : 'err',
+      ),
       focusToken,
     };
   }

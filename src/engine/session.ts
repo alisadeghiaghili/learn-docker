@@ -1,6 +1,6 @@
 import type { AppProgress, DockerState, LevelDefinition, LevelProgress } from './types';
 import type { CurriculumSummary } from '../ui/share';
-import { cloneState, createInitialState } from './engine';
+import { cloneState, createInitialState, runContainer, createNetwork, createVolume } from './engine';
 import { findRegistryImage } from './registry';
 import { LEVELS, getLevel, getNextLevel } from '../levels';
 
@@ -15,8 +15,7 @@ interface PersistBlob {
 
 function readCookie(): string | null {
   if (typeof document === 'undefined') return null;
-  const parts = document.cookie.split(';');
-  for (const part of parts) {
+  for (const part of document.cookie.split(';')) {
     const [rawKey, ...rest] = part.trim().split('=');
     if (rawKey !== COOKIE_KEY) continue;
     try {
@@ -30,8 +29,7 @@ function readCookie(): string | null {
 
 function writeCookie(payload: string): void {
   if (typeof document === 'undefined') return;
-  const encoded = encodeURIComponent(payload);
-  document.cookie = `${COOKIE_KEY}=${encoded}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+  document.cookie = `${COOKIE_KEY}=${encodeURIComponent(payload)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
 }
 
 function parseBlob(raw: string | null): Record<string, LevelProgress> | null {
@@ -47,7 +45,6 @@ function parseBlob(raw: string | null): Record<string, LevelProgress> | null {
   }
 }
 
-/** Merge localStorage + cookie so progress survives weeks and new sessions. */
 export function loadProgress(): AppProgress {
   let fromLocal: Record<string, LevelProgress> | null = null;
   let fromCookie: Record<string, LevelProgress> | null = null;
@@ -61,7 +58,6 @@ export function loadProgress(): AppProgress {
   } catch {
     fromCookie = null;
   }
-
   const merged: Record<string, LevelProgress> = {};
   for (const src of [fromCookie ?? {}, fromLocal ?? {}]) {
     for (const [id, prog] of Object.entries(src)) {
@@ -76,6 +72,7 @@ export function loadProgress(): AppProgress {
               ? prev.bestCommands
               : Math.min(prev.bestCommands, prog.bestCommands),
         attempts: Math.max(prog.attempts ?? 0, prev?.attempts ?? 0),
+        quizScore: prog.quizScore ?? prev?.quizScore,
       };
     }
   }
@@ -83,33 +80,42 @@ export function loadProgress(): AppProgress {
 }
 
 export function saveProgress(progress: AppProgress): void {
-  const blob: PersistBlob = {
-    progress: progress.levels,
-    savedAt: new Date().toISOString(),
-  };
+  const blob: PersistBlob = { progress: progress.levels, savedAt: new Date().toISOString() };
   const payload = JSON.stringify(blob);
   try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, payload);
-    }
+    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, payload);
   } catch {
-    // private mode — cookie still helps
+    // ignore
   }
   writeCookie(payload);
 }
 
+export function recordSolve(progress: AppProgress, levelId: string, commandsUsed: number): AppProgress {
+  const prev = progress.levels[levelId] ?? { solved: false, bestCommands: null, attempts: 0 };
+  const best = prev.bestCommands == null ? commandsUsed : Math.min(prev.bestCommands, commandsUsed);
+  const next: AppProgress = {
+    levels: {
+      ...progress.levels,
+      [levelId]: { solved: true, bestCommands: best, attempts: prev.attempts + 1 },
+    },
+    quizzes: progress.quizzes,
+  };
+  saveProgress(next);
+  return next;
+}
+
 export function applyLevelStart(level: LevelDefinition | undefined): DockerState {
   let state = createInitialState();
-  if (!level?.start) {
-    return state;
-  }
+  if (!level?.start) return state;
   const start = level.start;
+
+  if (start.files) {
+    state.files = { ...state.files, ...start.files };
+  }
   if (start.prePulled) {
     for (const name of start.prePulled) {
       const catalog = findRegistryImage(name);
-      if (!catalog) continue;
-      const existing = state.images.find((i) => i.name === catalog.name);
-      if (existing) continue;
+      if (!catalog || state.images.find((i) => i.name === catalog.name)) continue;
       state.images.push({
         name: catalog.name,
         repo: catalog.repo,
@@ -118,37 +124,51 @@ export function applyLevelStart(level: LevelDefinition | undefined): DockerState
         layers: catalog.layers.map((l) => ({ ...l })),
         sizeKb: catalog.sizeKb,
         created: new Date().toISOString(),
+        vulns: catalog.vulns ? { ...catalog.vulns } : undefined,
+        user: catalog.user ?? 'root',
       });
       state.nextImageSeq += 1;
     }
   }
+  if (start.compose) {
+    const compose = structuredClone(start.compose);
+    state.compose = compose;
+    const netName = compose.networks[0];
+    if (netName && !state.networks.find((n) => n.name === netName)) {
+      state = createNetwork(state, netName);
+    }
+    for (const v of compose.volumes ?? []) {
+      if (!state.volumes.find((x) => x.name === v)) state = createVolume(state, v);
+    }
+  }
+  if (start.containers) {
+    for (const spec of start.containers) {
+      const catalog = findRegistryImage(spec.image);
+      if (catalog && !state.images.find((i) => i.name === catalog.name)) {
+        state.images.push({
+          name: catalog.name,
+          repo: catalog.repo,
+          tag: catalog.tag,
+          imageId: `sha256:pre${state.nextImageSeq.toString(16).padStart(4, '0')}`,
+          layers: catalog.layers.map((l) => ({ ...l })),
+          sizeKb: catalog.sizeKb,
+          created: new Date().toISOString(),
+        });
+        state.nextImageSeq += 1;
+      }
+      const result = runContainer(state, spec.image, {
+        name: spec.name,
+        detach: true,
+        ports: spec.ports ?? [],
+        volumes: spec.volumeMounts ?? [],
+        network: spec.networks?.[0],
+        env: spec.env ?? {},
+        command: spec.command ? spec.command.split(' ') : undefined,
+      });
+      state = result.state;
+    }
+  }
   return state;
-}
-
-export function recordSolve(
-  progress: AppProgress,
-  levelId: string,
-  commandsUsed: number,
-): AppProgress {
-  const prev = progress.levels[levelId] ?? {
-    solved: false,
-    bestCommands: null,
-    attempts: 0,
-  };
-  const best =
-    prev.bestCommands == null ? commandsUsed : Math.min(prev.bestCommands, commandsUsed);
-  const next: AppProgress = {
-    levels: {
-      ...progress.levels,
-      [levelId]: {
-        solved: true,
-        bestCommands: best,
-        attempts: prev.attempts + 1,
-      },
-    },
-  };
-  saveProgress(next);
-  return next;
 }
 
 export function summarizeCurriculum(progress: AppProgress): CurriculumSummary {
@@ -163,22 +183,17 @@ export function summarizeCurriculum(progress: AppProgress): CurriculumSummary {
       seriesTitle: level.series,
       outcomes: level.learning,
     };
-    if (progress.levels[level.id]?.solved) {
-      learned.push(item);
-    } else {
+    if (progress.levels[level.id]?.solved) learned.push(item);
+    else {
       remaining.push(item);
       if (!next) next = item;
     }
   }
 
   const lastSolvedIdx = LEVELS.reduce((acc, l, i) => (progress.levels[l.id]?.solved ? i : acc), -1);
-  const officialNext =
-    lastSolvedIdx >= 0 ? getNextLevel(LEVELS[lastSolvedIdx]!.id) : LEVELS[0];
-  if (officialNext && progress.levels[officialNext.id]?.solved) {
-    next = remaining[0] ?? null;
-  } else if (officialNext) {
-    next = remaining.find((r) => r.id === officialNext.id) ?? remaining[0] ?? null;
-  }
+  const officialNext = lastSolvedIdx >= 0 ? getNextLevel(LEVELS[lastSolvedIdx]!.id) : LEVELS[0];
+  if (officialNext && progress.levels[officialNext.id]?.solved) next = remaining[0] ?? null;
+  else if (officialNext) next = remaining.find((r) => r.id === officialNext.id) ?? remaining[0] ?? null;
 
   return {
     solvedCount: learned.length,
@@ -194,15 +209,12 @@ export function resumeLine(summary: CurriculumSummary): string {
   if (!summary.solvedCount) {
     return `No saved progress yet (${summary.total} levels waiting). Start with \`levels\`.`;
   }
-  const learnedTitles = summary.learned.map((l) => `${l.name}`).join(' · ');
-  const nextText = summary.next
-    ? `Next up: ${summary.next.name}`
-    : 'All levels cleared.';
+  const nextText = summary.next ? `Next up: ${summary.next.name}` : 'All levels cleared.';
   return [
     `Welcome back — progress saved: ${summary.solvedCount}/${summary.total} levels (${summary.percent}%).`,
-    `Learned so far: ${learnedTitles}`,
+    `Learned so far: ${summary.learned.map((l) => l.name).join(' · ')}`,
     nextText,
-    'Open Levels to resume. Type `steps` after starting a level.',
+    'Open Levels to resume. Type `steps` after starting a level. Type `quiz` to test concepts.',
   ].join('\n');
 }
 
