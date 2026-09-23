@@ -15,9 +15,7 @@ export interface ImageRef {
   layers: ImageLayer[];
   sizeKb: number;
   created: string;
-  /** Present when this image was built locally and is untagged/dangling */
   dangling?: boolean;
-  /** Source image if this was built FROM something */
   parent?: string;
 }
 
@@ -39,17 +37,14 @@ export interface Container {
   env: Record<string, string>;
   volumeMounts: Array<{ volume: string; path: string }>;
   networks: string[];
-  /** Dotted hostname used on networks */
   hostname: string;
   exitCode?: number;
-  /** Simulated filesystem writes while a volume is mounted */
   volumeData: Record<string, string>;
 }
 
 export interface Volume {
   name: string;
   createdAt: string;
-  /** key → file path, value → content written by containers */
   data: Record<string, string>;
   labels: Record<string, string>;
 }
@@ -79,8 +74,15 @@ export interface RegistryImage {
   layers: ImageLayer[];
   sizeKb: number;
   description: string;
-  /** Built-in Dockerfile used when building this image as a base */
   dockerfile?: string[];
+}
+
+export interface LevelStep {
+  /** Suggested command (for checklist + Tab hints). */
+  command: string;
+  /** What this step does and why it matters. */
+  note: string;
+  optional?: boolean;
 }
 
 export interface LevelDefinition {
@@ -88,6 +90,12 @@ export interface LevelDefinition {
   name: string;
   series: string;
   brief: string;
+  /** Longer teaching narrative: what is happening and why. */
+  teaching: string;
+  /** Concrete checklist for the right panel. */
+  steps: LevelStep[];
+  fieldNotes?: string[];
+  learning: string[];
   hint?: string;
   par: number;
   start?: Partial<DockerState> & {
@@ -110,7 +118,6 @@ export interface AppProgress {
 export interface EngineOutput {
   lines: string[];
   ok: boolean;
-  /** Set when a level-level command should change UI mode */
   mode?: 'sandbox' | 'levels' | 'help';
   solved?: boolean;
   levelId?: string;

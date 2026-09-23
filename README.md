@@ -1,11 +1,10 @@
 # learn-docker
 
 Interactive Docker visualizer, sandbox, and tutorial game.
-Product pattern inspired by [learnGitBranching](https://github.com/pcottle/learnGitBranching) — rebuilt for containers.
-
-**Live:** https://alisadeghiaghili.github.io/learn-docker/
 
 Type Docker CLI commands in a terminal. A simulated daemon updates a multi-zone schematic (registry, image layers, containers, volumes, networks). Guided levels teach the mental models that the real CLI leaves invisible.
+
+**Live:** https://alisadeghiaghili.github.io/learn-docker/
 
 ## Quick start
 
@@ -33,24 +32,25 @@ Production build locally:
 GITHUB_PAGES=true npm run build
 ```
 
-Then serve `dist/` from any static host (or open via Pages URL after deploy).
-
 ## What works
 
 - Sandbox mode with simulated `docker` commands
-- Levels with win conditions and command golf (par)
-- `undo` / `reset`, object inspector, progress in `localStorage`
+- Levels with teaching notes, step checklists, and command golf (par)
+- Level-clear celebration with LinkedIn / X / Facebook share + learned curriculum list
+- Word-wise Tab completion, ↑/↓ command history, sticky prompt focus
+- Progress saved in `localStorage` + cookie (resume next week)
+- `undo` / `reset`, object inspector
 - Images, containers, volumes, networks, port publish, `docker build` layers
 
 ## Scope
 
-This is a client-side simulator, not a Docker daemon bridge. No real containers run. Deferred vs a full tutorial platform: level builder UI, gist permalinks, i18n.
+This is a client-side simulator, not a Docker daemon bridge. No real containers run. Deferred: level builder UI, gist permalinks, i18n.
 
 ## Architecture
 
 - `src/engine/` — state machine + CLI parser + level checks
-- `src/levels/` — curriculum definitions
-- `src/ui/` — React shell, schematic SVG, terminal, dialogs
+- `src/levels/` — curriculum definitions (teaching, steps, outcomes)
+- `src/ui/` — React shell, schematic SVG, terminal, celebration, share
 
 ## License
 

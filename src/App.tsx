@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useReducer, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef } from 'react';
 import {
   appReducer,
   createInitialState,
@@ -8,30 +8,32 @@ import {
 import { Schematic } from './ui/Schematic';
 import { Terminal } from './ui/Terminal';
 import { HelpDialog, IntroDialog, LevelsDialog } from './ui/Dialogs';
+import { CelebrateModal } from './ui/CelebrateModal';
 import { getLevel, LEVELS } from './levels';
 import './styles/app.css';
 
 export default function App() {
   const [state, dispatch] = useReducer(appReducer, undefined, createInitialState);
-  const [input, setInput] = useState('');
   const level = state.levelId ? getLevel(state.levelId) : undefined;
   const selected = useMemo(() => selectedObject(state), [state]);
   const solvedCount = getSolvedCount(state.progress);
+  const celebrateLevel = state.celebrateLevelId ? getLevel(state.celebrateLevelId) : null;
+  const celebratedRef = useRef<string | null>(null);
 
-  const onHistory = useCallback(
-    (direction: 1 | -1): string | undefined => {
-      const hist = state.commandHistory;
-      if (hist.length === 0) return '';
-      const idx =
-        state.historyIndex === null
-          ? hist.length - 1
-          : state.historyIndex + direction;
-      const clamped = Math.max(0, Math.min(hist.length - 1, idx));
-      dispatch({ type: 'HISTORY_NAV', direction });
-      return hist[clamped];
-    },
-    [state.commandHistory, state.historyIndex],
-  );
+  useEffect(() => {
+    if (!state.showCelebrate || !celebrateLevel) return;
+    if (celebratedRef.current === `${celebrateLevel.id}:${state.commandCount}`) return;
+    celebratedRef.current = `${celebrateLevel.id}:${state.commandCount}`;
+  }, [state.showCelebrate, celebrateLevel, state.commandCount]);
+
+  const currentStepIndex = useMemo(() => {
+    if (!level) return -1;
+    if (level.check(state.state)) return level.steps.length;
+    // Find first non-optional step not yet reflected — reuse hint string match
+    const hint = state.hint;
+    const idx = level.steps.findIndex((s) => !s.optional && s.command === hint);
+    return idx >= 0 ? idx : 0;
+  }, [level, state.state, state.hint]);
 
   return (
     <div className="app">
@@ -68,9 +70,9 @@ export default function App() {
           <div className="canvas-header">
             <div className="canvas-title">daemon schematic</div>
             <div className="canvas-stats">
-              images {state.state.images.length} · containers{' '}
-              {state.state.containers.length} · volumes {state.state.volumes.length} · nets{' '}
-              {state.state.networks.length} · cmds {state.commandCount}
+              images {state.state.images.length} · containers {state.state.containers.length} ·
+              volumes {state.state.volumes.length} · nets {state.state.networks.length} · cmds{' '}
+              {state.commandCount}
               {state.mode === 'level' && level ? ` · par ${level.par}` : ''}
             </div>
           </div>
@@ -79,18 +81,6 @@ export default function App() {
             selection={state.selection}
             onSelect={(selection) => dispatch({ type: 'SELECT', selection })}
           />
-          {state.solvedFlash && level && (
-            <div className="solved-overlay">
-              LEVEL SOLVED — {level.name} · {state.commandCount}/{level.par} commands ·{' '}
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => dispatch({ type: 'OPEN_LEVELS', open: true })}
-              >
-                next level
-              </button>
-            </div>
-          )}
         </div>
 
         <aside className="side">
@@ -108,6 +98,55 @@ export default function App() {
                 </div>
                 <h2>{level.name}</h2>
                 <p>{level.brief}</p>
+                <div className="teaching-box">
+                  <div className="next-title">What is happening</div>
+                  <p>{level.teaching}</p>
+                </div>
+                {level.learning.length > 0 && (
+                  <div className="learning-box">
+                    <div className="next-title">You are learning</div>
+                    <ul>
+                      {level.learning.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {level.fieldNotes && level.fieldNotes.length > 0 && (
+                  <div className="field-box">
+                    <div className="next-title">Field notes</div>
+                    <ul>
+                      {level.fieldNotes.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className="goal-list" aria-label="Level steps">
+                  <div className="next-title">Steps</div>
+                  <ul>
+                    {level.steps.map((step, i) => {
+                      const isDone = level.check(state.state) || i < currentStepIndex;
+                      const isCurrent = !level.check(state.state) && i === currentStepIndex;
+                      return (
+                        <li
+                          key={`${step.command}-${i}`}
+                          className={`${isDone ? 'met' : ''}${isCurrent ? ' current' : ''}${step.optional ? ' optional' : ''}`}
+                        >
+                          <div className="g-label">
+                            <span className="step-icon" aria-hidden>
+                              {isDone ? '✓' : isCurrent ? '▶' : '○'}
+                            </span>
+                            <code>{step.command}</code>
+                            {isCurrent ? <span className="chip current-chip">now</span> : null}
+                            {step.optional ? <span className="chip">optional</span> : null}
+                          </div>
+                          <div className="g-detail">{step.note}</div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
                 {level.hint && (
                   <div className="level-hint">
                     hint
@@ -127,7 +166,8 @@ export default function App() {
                 <h2>Free play</h2>
                 <p>
                   Empty simulated daemon. Pull images, run containers, mount volumes, wire
-                  networks. Type <code>levels</code> when you want a guided path.
+                  networks. Type <code>levels</code> when you want a guided path. Progress is saved
+                  in this browser (cookie + local storage).
                 </p>
               </>
             )}
@@ -147,11 +187,10 @@ export default function App() {
 
       <Terminal
         lines={state.lines}
-        value={input}
-        onChange={setInput}
+        hint={state.hint}
+        extraCompletions={state.extraCompletions}
+        focusToken={state.focusToken}
         onSubmit={(value) => dispatch({ type: 'SUBMIT', input: value })}
-        onHistory={onHistory}
-        historyValue={null}
       />
 
       <LevelsDialog
@@ -168,6 +207,21 @@ export default function App() {
         onOpenLevels={() => dispatch({ type: 'OPEN_LEVELS', open: true })}
       />
       <HelpDialog open={state.showHelp} onClose={() => dispatch({ type: 'OPEN_HELP', open: false })} />
+      {state.showCelebrate && celebrateLevel ? (
+        <CelebrateModal
+          levelId={celebrateLevel.id}
+          levelName={celebrateLevel.name}
+          series={celebrateLevel.series}
+          par={celebrateLevel.par}
+          commands={state.commandCount}
+          progress={state.progress}
+          onClose={() => dispatch({ type: 'CLOSE_CELEBRATE' })}
+          onNext={(id) => {
+            dispatch({ type: 'CLOSE_CELEBRATE' });
+            dispatch({ type: 'START_LEVEL', levelId: id });
+          }}
+        />
+      ) : null}
     </div>
   );
 }
