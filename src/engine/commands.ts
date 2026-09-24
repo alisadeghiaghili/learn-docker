@@ -1,5 +1,12 @@
 import type { DockerState, EngineOutput, ImageRef } from './types';
-import { DEMO_CONTEXT_FILES, MULTISTAGE_DOCKERFILE, REGISTRY, splitImageName } from './registry';
+import {
+  DEMO_COMPOSE,
+  DEMO_CONTEXT_FILES,
+  MULTISTAGE_DOCKERFILE,
+  REGISTRY,
+  findRegistryImage,
+  splitImageName,
+} from './registry';
 import {
   EngineError,
   buildImage,
@@ -25,7 +32,6 @@ import {
   setContainerStatus,
   systemPrune,
 } from './engine';
-import { DEMO_COMPOSE } from './registry';
 
 export interface CommandResult extends EngineOutput {
   state: DockerState;
@@ -37,8 +43,9 @@ const HELP_TEXT = [
   'App: help · levels · hint · steps · curriculum · sandbox · reset · undo · clear · quiz',
   '',
   'Docker (simulated):',
-  '  docker pull|images|rmi|history|inspect|logs|exec|version',
-  '  docker run [-d|--rm] [--name] [-p H:C] [-v name:path] [--network] [-e K=V]',
+  '  docker pull|images|rmi|tag|push|login|logout|history|inspect|logs|exec|version|scan',
+  '  docker pull [--platform linux/amd64|arm64] IMAGE',
+  '  docker tag SRC DST · docker push NAME',
   '           [--restart POLICY] [--healthcheck CMD] [--user U] [--read-only] [--memory] [--cpus]',
   '  docker ps [-a] · start|stop|restart|rm [-f]',
   '  docker build [-t TAG] [--target STAGE] [--no-cache] .',
@@ -284,10 +291,123 @@ function executeDocker(args: string[], state: DockerState): CommandResult {
     case 'help':
       return ok(state, HELP_TEXT);
 
+    case 'tag': {
+      const src = rest[0];
+      const dest = rest[1];
+      if (!src || !dest) {
+        return fail(state, ['Usage: docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]']);
+      }
+      const img = findImage(state, src);
+      if (!img) return fail(state, [`Error: No such image: ${src}`]);
+      const next = cloneState(state);
+      const split = splitImageName(dest);
+      next.images.push({
+        ...img,
+        name: dest.includes(':') ? dest : `${dest}:${img.tag}`,
+        repo: split.repo,
+        tag: split.tag,
+        created: img.created,
+      });
+      return ok(next, [dest]);
+    }
+
+    case 'login': {
+      const host = rest.find((t) => !t.startsWith('-')) ?? 'docker.io';
+      return ok(state, [
+        'Login Succeeded',
+        `Logged in to ${host} (simulated credential helper).`,
+      ]);
+    }
+
+    case 'logout': {
+      return ok(state, ['Removed login credentials for your registry']);
+    }
+
+    case 'push': {
+      const name = rest.filter((t) => !t.startsWith('-'))[0];
+      if (!name) return fail(state, ['"docker push" requires an image name.']);
+      const img = findImage(state, name) ?? state.images.find((i) => i.name === name || `${i.repo}:${i.tag}` === name);
+      if (!img) {
+        return fail(state, [
+          `An image does not exist locally with the tag: ${name}`,
+          'docker tag first, then push.',
+        ]);
+      }
+      if (!name.includes('.') && !name.includes('/') && name.includes('library') === false) {
+        // pushing bare names goes to docker.io — allowed
+      }
+      if (name.startsWith('registry.example.com') || name.includes('example.com')) {
+        // simulated private registry always accepts after login
+      }
+      return ok(state, [
+        `The push refers to repository [${img.repo}]`,
+        `${img.tag}: digest: sha256:${img.imageId.replace('sha256:', '')}cafe size: ${img.sizeKb}`,
+        `Pushed ${img.name}`,
+      ]);
+    }
+
     case 'pull': {
-      const name = rest[0];
+      const args = rest;
+      let platform: string | undefined;
+      const names: string[] = [];
+      for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--platform') {
+          platform = args[i + 1];
+          i += 1;
+        } else if (!args[i]!.startsWith('-')) {
+          names.push(args[i]!);
+        }
+      }
+      const name = names[0];
       if (!name) return fail(state, ['"docker pull" requires at least 1 argument.']);
       const normalized = name.includes(':') ? name : `${name}:latest`;
+
+      // multi-arch simulated as distinct local tags
+      if (platform) {
+        const base = normalized;
+        const arch = platform.includes('arm64') ? 'arm64' : platform.includes('amd64') ? 'amd64' : 'unknown';
+        const tagged = base.includes(':')
+          ? `${base}-${arch}`
+          : `${base}:${arch}`;
+        // prefer tagging alpine-style names: name:tag-arch
+        const { repo, tag } = splitImageName(normalized);
+        const localName = `${repo}:${tag}-${arch}`;
+        const catalog = findRegistryImage(normalized);
+        if (!catalog) {
+          return fail(state, [
+            `Error response from daemon: manifest for ${normalized} not found: manifest unknown (platform ${platform})`,
+          ]);
+        }
+        void tagged;
+        const already = findImage(state, localName);
+        if (already) {
+          return ok(state, [
+            `${localName}: Pulling from ${repo}`,
+            'Status: Image is up to date for platform ' + platform,
+            localName,
+          ]);
+        }
+        let next = pullImage(state, normalized);
+        // retag to platform-specific name
+        const generic = findImage(next, normalized);
+        if (generic && !findImage(next, localName)) {
+          next = cloneState(next);
+          next.images.push({
+            ...generic,
+            name: localName,
+            repo,
+            tag: `${tag}-${arch}`,
+          });
+        }
+        return ok(next, [
+          `${localName}: Pulling from ${repo}`,
+          `platform: ${platform}`,
+          `Digest: sha256:plat${arch}dead`,
+          `Status: Downloaded image for ${platform}`,
+          localName,
+        ]);
+      }
+
       const already = findImage(state, normalized);
       if (already) {
         return ok(state, [

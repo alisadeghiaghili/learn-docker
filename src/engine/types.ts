@@ -147,6 +147,7 @@ export interface LevelStep {
 export type LevelPack =
   | 'Basics'
   | 'Build'
+  | 'Registry'
   | 'Compose'
   | 'Networks'
   | 'Data'

@@ -365,7 +365,8 @@ export function removeImage(state: DockerState, name: string): DockerState {
       `Error response from daemon: conflict: unable to remove image ${name} (must force) - container ${inUse.id} is using its referenced image`,
     );
   }
-  next.images = next.images.filter((i) => i.imageId !== img.imageId);
+  // Untag only this name; layers die when the last alias is gone.
+  next.images = next.images.filter((i) => !(i.repo === img.repo && i.tag === img.tag && i.imageId === img.imageId));
   return next;
 }
 

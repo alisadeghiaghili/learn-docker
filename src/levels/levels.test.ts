@@ -33,6 +33,7 @@ describe('curriculum integrity', () => {
     for (const s of [
       'Basics',
       'Build',
+      'Registry',
       'Compose',
       'Data',
       'Networks',
@@ -314,5 +315,39 @@ describe('level solutions', () => {
         ),
       ),
     ).toBe(true);
+  });
+
+  it('registry pack: alias, multi-arch, push, untag', () => {
+    const alias = run(
+      applyLevelStart(level('reg-names-tags')),
+      'docker pull alpine:3.20',
+      'docker tag alpine:3.20 alpine:stable',
+    );
+    expect(level('reg-names-tags').check(alias)).toBe(true);
+
+    const multi = run(
+      applyLevelStart(level('reg-multiarch')),
+      'docker pull --platform linux/amd64 alpine:3.20',
+      'docker pull --platform linux/arm64 alpine:3.20',
+    );
+    expect(level('reg-multiarch').check(multi)).toBe(true);
+
+    const pushed = run(
+      applyLevelStart(level('reg-push-login')),
+      'docker pull nginx:1.25',
+      'docker login registry.example.com',
+      'docker tag nginx:1.25 registry.example.com/team/web:1.0',
+      'docker push registry.example.com/team/web:1.0',
+    );
+    expect(level('reg-push-login').check(pushed)).toBe(true);
+
+    const untagged = run(
+      applyLevelStart(level('reg-untag-refcount')),
+      'docker pull alpine:3.20',
+      'docker tag alpine:3.20 alpine:staging',
+      'docker rmi alpine:staging',
+    );
+    expect(level('reg-untag-refcount').check(untagged)).toBe(true);
+    expect(untagged.images.find((i) => i.repo === 'alpine' && i.tag === '3.20')).toBeTruthy();
   });
 });
