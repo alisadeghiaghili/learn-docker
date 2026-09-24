@@ -20,6 +20,7 @@ import {
 } from './bank';
 import { REGISTRY_LEVELS, REGISTRY_QUIZZES } from './registry-pack';
 import { REGISTRY_ADV_LEVELS, REGISTRY_ADV_QUIZZES } from './registry-adv';
+import { COVERAGE_LEVELS, COVERAGE_QUIZZES } from './coverage-pack';
 
 export const LEVELS: LevelDefinition[] = [
   ...BASIC_LEVELS,
@@ -30,6 +31,7 @@ export const LEVELS: LevelDefinition[] = [
   ...COMPOSE_PROD_LEVELS,
   ...DATA_LEVELS,
   ...NETWORK_LEVELS,
+  ...COVERAGE_LEVELS,
   ...OPS_LEVELS,
   ...SECURITY_LEVELS,
   ...SECURITY_DRILLS,
@@ -44,6 +46,7 @@ export const QUIZ_BANK: QuizQuestion[] = [
   ...EXTRA_QUIZZES,
   ...REGISTRY_QUIZZES,
   ...REGISTRY_ADV_QUIZZES,
+  ...COVERAGE_QUIZZES,
 ];
 
 export { QUIZZES, EXTRA_QUIZZES };

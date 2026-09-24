@@ -17,6 +17,7 @@ import {
   recordSolve,
 } from '../engine/session';
 import { QUIZ_BANK, quizzesForLevel, quizByIndex } from '../levels';
+import { RUBRIC_QUESTIONS, reviewDue } from '../engine/assessment';
 import type { LogLine } from './Terminal';
 
 export type AppMode = 'sandbox' | 'level';
@@ -378,8 +379,54 @@ function handleSubmit(state: AppState, rawInput: string): AppState {
       focusToken,
     };
   }
-  if (input === 'quiz' || input.startsWith('quiz ') || input === 'checkpoint') {
+  if (input === 'quiz' || input.startsWith('quiz ') || input === 'checkpoint' || input === 'review' || input === 'rubric' || input.startsWith('rubric ')) {
     const level = currentLevel(state);
+    if (input === 'review') {
+      const items = reviewDue(Object.keys(state.progress.levels).filter((id) => state.progress.levels[id]?.solved).length);
+      return {
+        ...state,
+        lines: pushLines(
+          [...state.lines, lineIn],
+          items.length
+            ? ['Spaced review — answer out loud, then peek at teaching.', ...items.map((r) => `[day ${r.day}] ${r.prompt}`)]
+            : ['No review due yet. Solve a few levels first.'],
+          'out',
+        ),
+        focusToken,
+      };
+    }
+    if (input === 'rubric' || input.startsWith('rubric ')) {
+      const arg = input.slice(6).trim();
+      if (!arg) {
+        return {
+          ...state,
+          lines: pushLines(
+            [...state.lines, lineIn],
+            [
+              'Rubric essays — write answers, then score 0–2 per key bullet (see docs/RUBRIC.md).',
+              ...RUBRIC_QUESTIONS.map((q) => `${q.id}: ${q.prompt}`),
+            ],
+            'out',
+          ),
+          focusToken,
+        };
+      }
+      const q = RUBRIC_QUESTIONS.find((x) => x.id === arg) ?? RUBRIC_QUESTIONS[0]!;
+      return {
+        ...state,
+        lines: pushLines(
+          [...state.lines, lineIn],
+          [
+            `RUBRIC ${q.id} (pass ≥ ${q.passScore} bullets)`,
+            q.prompt,
+            'Self-grade key (hide until done):',
+            ...q.keyPoints.map((k) => `• ${k}`),
+          ],
+          'out',
+        ),
+        focusToken,
+      };
+    }
     if (input === 'checkpoint') {
       const qs = level?.quiz?.length ? quizzesForLevel(level) : QUIZ_BANK.slice(0, 3);
       return {

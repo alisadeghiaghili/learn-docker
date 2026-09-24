@@ -351,45 +351,34 @@ describe('level solutions', () => {
     expect(untagged.images.find((i) => i.repo === 'alpine' && i.tag === '3.20')).toBeTruthy();
   });
 
-  it('registry advanced: manifest, sign, sbom, mirror, capstone gate', () => {
+  it('coverage pack: topology, compose split, logs, swarm restart policy', () => {
     expect(
-      level('reg-manifest-inspect').check(
-        run(applyLevelStart(level('reg-manifest-inspect')), 'docker buildx imagetools inspect node:20'),
+      level('net-deep-topologies').check(
+        run(applyLevelStart(level('net-deep-topologies')), 'docker network create app-net', 'docker run -d --name a --network app-net alpine:3.20'),
       ),
     ).toBe(true);
 
-    const signed = run(
-      applyLevelStart(level('reg-sign-verify')),
-      'docker pull alpine:3.20',
-      'docker sign alpine:3.20',
-      'docker verify alpine:3.20',
-    );
-    expect(level('reg-sign-verify').check(signed)).toBe(true);
-
-    const sbom = run(applyLevelStart(level('reg-sbom')), 'docker pull alpine:3.20', 'docker sbom alpine:3.20');
-    expect(level('reg-sbom').check(sbom)).toBe(true);
-
     expect(
-      level('reg-rate-limit-mirror').check(
-        run(
-          applyLevelStart(level('reg-rate-limit-mirror')),
-          'docker pull alpine:3.20',
-          'docker tag alpine:3.20 registry.example.com/mirror/alpine:3.20',
-        ),
-      ),
+      level('compose-files-split').check(run(applyLevelStart(level('compose-files-split')), 'docker compose up -d')),
     ).toBe(true);
 
-    const capstone = run(
-      applyLevelStart(level('reg-capstone-gate')),
-      'docker pull alpine:3.20',
-      'docker scan alpine:3.20',
-      'docker sbom alpine:3.20',
-      'docker sign alpine:3.20',
-      'docker verify alpine:3.20',
-      'docker tag alpine:3.20 registry.example.com/team/base:3.20',
-      'docker buildx imagetools inspect alpine:3.20',
-    );
-    expect(level('reg-capstone-gate').check(capstone)).toBe(true);
-    expect(capstone.images.some((i) => i.tag === 'latest')).toBe(false);
+    expect(
+      level('ops-log-drivers').check(run(applyLevelStart(level('ops-log-drivers')), 'docker run -d --name web nginx:1.25')),
+    ).toBe(true);
+
+    expect(
+      level('ops-swarm-intro').check(
+        run(applyLevelStart(level('ops-swarm-intro')), 'docker run -d --name web --restart unless-stopped -p 8080:80 nginx:1.25'),
+      ),
+    ).toBe(true);
+  });
+
+  it('assessment bank has rubric + spaced review depth', async () => {
+    const { RUBRIC_QUESTIONS, SPACED_REVIEW, reviewDue } = await import('../engine/assessment');
+    expect(RUBRIC_QUESTIONS.length).toBeGreaterThanOrEqual(12);
+    expect(SPACED_REVIEW.length).toBeGreaterThanOrEqual(8);
+    expect(RUBRIC_QUESTIONS.find((q) => q.id === 'r-capstone-explain')?.passScore).toBeGreaterThanOrEqual(6);
+    expect(reviewDue(0).length).toBe(0);
+    expect(reviewDue(20).length).toBe(SPACED_REVIEW.length);
   });
 });

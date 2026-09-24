@@ -223,9 +223,7 @@ code {
   margin-bottom: 6px;
 }
 
-.teaching-box,
-.learning-box,
-.field-box {
+.teaching-box {
   margin: 0 0 12px;
   padding: 10px 12px;
   background: var(--panel-2);
@@ -233,19 +231,40 @@ code {
   border-radius: 8px;
 }
 
+.teaching-box summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.teaching-box summary::-webkit-details-marker {
+  display: none;
+}
+
+.teaching-box summary::after {
+  content: ' ▾';
+  color: var(--muted);
+}
+
+.teaching-box[open] summary::after {
+  content: ' ▴';
+}
+
 .teaching-box p {
-  margin: 0;
+  margin: 8px 0 0;
   white-space: pre-wrap;
   font-size: 13px;
   color: var(--ink);
+  max-height: 220px;
+  overflow: auto;
 }
 
-.learning-box ul,
-.field-box ul {
-  margin: 0;
-  padding-left: 18px;
-  color: var(--ink);
-  font-size: 13px;
+.learning-box,
+.field-box {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 
 .field-box {

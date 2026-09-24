@@ -98,10 +98,10 @@ export default function App() {
                 </div>
                 <h2>{level.name}</h2>
                 <p>{level.brief}</p>
-                <div className="teaching-box">
-                  <div className="next-title">What is happening</div>
+                <details className="teaching-box" open>
+                  <summary className="next-title">What is happening</summary>
                   <p>{level.teaching}</p>
-                </div>
+                </details>
                 {level.learning.length > 0 && (
                   <div className="learning-box">
                     <div className="next-title">You are learning</div>
