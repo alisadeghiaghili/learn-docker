@@ -19,11 +19,13 @@ import {
   SECURITY_DRILLS,
 } from './bank';
 import { REGISTRY_LEVELS, REGISTRY_QUIZZES } from './registry-pack';
+import { REGISTRY_ADV_LEVELS, REGISTRY_ADV_QUIZZES } from './registry-adv';
 
 export const LEVELS: LevelDefinition[] = [
   ...BASIC_LEVELS,
   ...BUILD_LEVELS,
   ...REGISTRY_LEVELS,
+  ...REGISTRY_ADV_LEVELS,
   ...COMPOSE_LEVELS,
   ...COMPOSE_PROD_LEVELS,
   ...DATA_LEVELS,
@@ -37,7 +39,12 @@ export const LEVELS: LevelDefinition[] = [
   ...FAILURE_BANK,
 ];
 
-export const QUIZ_BANK: QuizQuestion[] = [...QUIZZES, ...EXTRA_QUIZZES, ...REGISTRY_QUIZZES];
+export const QUIZ_BANK: QuizQuestion[] = [
+  ...QUIZZES,
+  ...EXTRA_QUIZZES,
+  ...REGISTRY_QUIZZES,
+  ...REGISTRY_ADV_QUIZZES,
+];
 
 export { QUIZZES, EXTRA_QUIZZES };
 

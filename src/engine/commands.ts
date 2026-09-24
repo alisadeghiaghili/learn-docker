@@ -313,7 +313,9 @@ function executeDocker(args: string[], state: DockerState): CommandResult {
 
     case 'login': {
       const host = rest.find((t) => !t.startsWith('-')) ?? 'docker.io';
-      return ok(state, [
+      const next = cloneState(state);
+      next.loggedIn = [...(next.loggedIn ?? []), host];
+      return ok(next, [
         'Login Succeeded',
         `Logged in to ${host} (simulated credential helper).`,
       ]);
@@ -321,6 +323,104 @@ function executeDocker(args: string[], state: DockerState): CommandResult {
 
     case 'logout': {
       return ok(state, ['Removed login credentials for your registry']);
+    }
+
+    case 'sign': {
+      const name = rest.filter((t) => !t.startsWith('-'))[0];
+      if (!name) return fail(state, ['Usage: docker sign IMAGE']);
+      const img = findImage(state, name);
+      if (!img) return fail(state, [`Error: No such image: ${name}`]);
+      const next = cloneState(state);
+      next.signedImages = [...(next.signedImages ?? []), img.name];
+      return ok(next, [
+        `Signing ${img.name}@${img.imageId}`,
+        'Using ephemeral certificate from simulated OIDC identity: ci@example.com',
+        `Signature attached to digest ${img.imageId.replace('sha256:', '').slice(0, 12)}…`,
+      ]);
+    }
+
+    case 'verify': {
+      const name = rest.filter((t) => !t.startsWith('-'))[0];
+      if (!name) return fail(state, ['Usage: docker verify IMAGE']);
+      const img = findImage(state, name);
+      if (!img) return fail(state, [`Error: No such image: ${name}`]);
+      const signed = state.signedImages?.includes(img.name);
+      if (!signed) {
+        return fail(state, [
+          `Error: no matching signatures for ${img.name}`,
+          'policy: require certificate-identity ci@example.com — verification failed',
+        ]);
+      }
+      const next = cloneState(state);
+      next.verifiedImages = [...(next.verifiedImages ?? []), img.name];
+      return ok(next, [
+        `Verification payload for ${img.name}`,
+        'The following checks were performed:',
+        '  - existence of signatures',
+        '  - signatures were verified against the digest',
+        '  - certificates validated against identity ci@example.com',
+        'Verified OK',
+      ]);
+    }
+
+    case 'sbom': {
+      const name = rest.filter((t) => !t.startsWith('-'))[0];
+      if (!name) return fail(state, ['Usage: docker sbom IMAGE']);
+      const img = findImage(state, name) ?? findImage(state, `${name}:latest`);
+      if (!img) return fail(state, [`Error: No such image: ${name}`]);
+      const fat = img.sizeKb > 100_000;
+      const packages = fat ? 180 : 28;
+      const sample = fat
+        ? ['openssl@3.1.4', 'glibc@2.36', 'nodejs@20.11', 'zlib@1.3']
+        : ['musl@1.2.5', 'busybox@1.36', 'alpine-baselayout@3.4'];
+      const next = cloneState(state);
+      next.sboms = [...(next.sboms ?? []), { image: img.name, packages, sample }];
+      return ok(next, [
+        `SBOM for ${img.name} (CycloneDX, simulated syft)`,
+        `Packages: ${packages}`,
+        ...sample.map((p) => `  - ${p}`),
+        packages > 100
+          ? 'Note: fat base — large inventory and CVE surface.'
+          : 'Note: slim base — small inventory.',
+      ]);
+    }
+
+    case 'buildx': {
+      if (rest[0] === 'imagetools' && rest[1] === 'inspect') {
+        const name = rest[2];
+        if (!name) return fail(state, ['Usage: docker buildx imagetools inspect NAME']);
+        const local = findImage(state, name);
+        const next = cloneState(state);
+        next.registryInspected = [...(next.registryInspected ?? []), name];
+        const slug = name.replace(/\W/g, '').slice(0, 8);
+        return ok(next, [
+          `Name: ${name}`,
+          'MediaType: application/vnd.oci.image.index.v1+json',
+          `Digest: sha256:index${slug}c0ffee`,
+          'Manifests:',
+          `  Platform: linux/amd64  Digest: sha256:amd64${slug}`,
+          `  Platform: linux/arm64  Digest: sha256:arm64${slug}`,
+          local ? `Local IMAGE ID: ${local.imageId}` : 'Local: not pulled',
+        ]);
+      }
+      return fail(state, [`Unknown buildx subcommand: ${rest[0]}`]);
+    }
+
+    case 'manifest': {
+      if (rest[0] === 'inspect') {
+        const name = rest[1];
+        if (!name) return fail(state, ['Usage: docker manifest inspect NAME']);
+        const next = cloneState(state);
+        next.registryInspected = [...(next.registryInspected ?? []), name];
+        return ok(next, [
+          '{',
+          '   "schemaVersion": 2,',
+          '   "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",',
+          `   "platforms": [ {"os":"linux","architecture":"amd64"}, {"os":"linux","architecture":"arm64"} ]`,
+          '}',
+        ]);
+      }
+      return fail(state, [`Unknown manifest subcommand: ${rest[0]}`]);
     }
 
     case 'push': {

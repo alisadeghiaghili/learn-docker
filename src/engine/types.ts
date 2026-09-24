@@ -124,6 +124,12 @@ export interface DockerState {
   files: Record<string, string>;
   /** Counts of pruned objects for teaching */
   pruned?: { images: number; containers: number; volumes: number };
+  /** Remote manifest reads (imagetools/manifest inspect) */
+  registryInspected?: string[];
+  signedImages?: string[];
+  verifiedImages?: string[];
+  sboms?: Array<{ image: string; packages: number; sample: string[] }>;
+  loggedIn?: string[];
 }
 
 export interface RegistryImage {

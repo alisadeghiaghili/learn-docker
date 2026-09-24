@@ -56,7 +56,7 @@ describe('curriculum integrity', () => {
   });
 
   it('quiz bank is substantial and valid', () => {
-    expect(QUIZ_BANK.length).toBeGreaterThanOrEqual(25);
+    expect(QUIZ_BANK.length).toBeGreaterThanOrEqual(40);
     expect(quizzesForLevel(level('build-multistage')).length).toBeGreaterThanOrEqual(2);
     expect(getQuiz('q-multistage')?.correct).toBe(1);
     expect(CURRICULUM_OUTCOMES.length).toBeGreaterThanOrEqual(10);
@@ -349,5 +349,47 @@ describe('level solutions', () => {
     );
     expect(level('reg-untag-refcount').check(untagged)).toBe(true);
     expect(untagged.images.find((i) => i.repo === 'alpine' && i.tag === '3.20')).toBeTruthy();
+  });
+
+  it('registry advanced: manifest, sign, sbom, mirror, capstone gate', () => {
+    expect(
+      level('reg-manifest-inspect').check(
+        run(applyLevelStart(level('reg-manifest-inspect')), 'docker buildx imagetools inspect node:20'),
+      ),
+    ).toBe(true);
+
+    const signed = run(
+      applyLevelStart(level('reg-sign-verify')),
+      'docker pull alpine:3.20',
+      'docker sign alpine:3.20',
+      'docker verify alpine:3.20',
+    );
+    expect(level('reg-sign-verify').check(signed)).toBe(true);
+
+    const sbom = run(applyLevelStart(level('reg-sbom')), 'docker pull alpine:3.20', 'docker sbom alpine:3.20');
+    expect(level('reg-sbom').check(sbom)).toBe(true);
+
+    expect(
+      level('reg-rate-limit-mirror').check(
+        run(
+          applyLevelStart(level('reg-rate-limit-mirror')),
+          'docker pull alpine:3.20',
+          'docker tag alpine:3.20 registry.example.com/mirror/alpine:3.20',
+        ),
+      ),
+    ).toBe(true);
+
+    const capstone = run(
+      applyLevelStart(level('reg-capstone-gate')),
+      'docker pull alpine:3.20',
+      'docker scan alpine:3.20',
+      'docker sbom alpine:3.20',
+      'docker sign alpine:3.20',
+      'docker verify alpine:3.20',
+      'docker tag alpine:3.20 registry.example.com/team/base:3.20',
+      'docker buildx imagetools inspect alpine:3.20',
+    );
+    expect(level('reg-capstone-gate').check(capstone)).toBe(true);
+    expect(capstone.images.some((i) => i.tag === 'latest')).toBe(false);
   });
 });
