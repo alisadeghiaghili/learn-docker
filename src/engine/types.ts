@@ -64,6 +64,11 @@ export interface Container {
   composeProject?: string;
   logs: string[];
   execHistory: string[];
+  capDrop?: string[];
+  capAdd?: string[];
+  noNewPrivileges?: boolean;
+  memSwap?: string;
+  securityOpt?: string[];
 }
 
 export interface Volume {
@@ -175,8 +180,15 @@ export interface LevelDefinition {
     prePulled?: string[];
     files?: Record<string, string>;
     compose?: ComposeProject;
-    containers?: Array<Partial<Container> & { name: string; image: string }>;
+    containers?: Array<
+      Partial<Container> & {
+        name: string;
+        image: string;
+      }
+    >;
     broken?: boolean;
+    /** Extra named volumes to create at start */
+    volumes?: string[];
   };
   check: (state: DockerState) => boolean;
   /** Optional quiz gate after solve */

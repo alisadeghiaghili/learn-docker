@@ -137,8 +137,13 @@ interface RunFlagOptions {
   user?: string;
   readOnly?: boolean;
   memLimit?: string;
+  memSwap?: string;
   cpus?: number;
   labels?: Record<string, string>;
+  capDrop?: string[];
+  capAdd?: string[];
+  noNewPrivileges?: boolean;
+  securityOpt?: string[];
 }
 
 function parseRunFlags(tokens: string[]): { options: RunFlagOptions; image?: string; rest: string[] } {
@@ -208,6 +213,23 @@ function parseRunFlags(tokens: string[]): { options: RunFlagOptions; image?: str
         i += 2;
       } else if (t === '--cpus') {
         options.cpus = Number(tokens[i + 1]);
+        i += 2;
+      } else if (t === '--cap-drop') {
+        options.capDrop = options.capDrop ?? [];
+        options.capDrop.push(tokens[i + 1] ?? 'ALL');
+        i += 2;
+      } else if (t === '--cap-add') {
+        options.capAdd = options.capAdd ?? [];
+        options.capAdd.push(tokens[i + 1] ?? '');
+        i += 2;
+      } else if (t === '--security-opt') {
+        const spec = tokens[i + 1] ?? '';
+        options.securityOpt = options.securityOpt ?? [];
+        options.securityOpt.push(spec);
+        if (spec.includes('no-new-privileges')) options.noNewPrivileges = true;
+        i += 2;
+      } else if (t === '--memory-swap') {
+        options.memSwap = tokens[i + 1];
         i += 2;
       } else if (t === '--label') {
         const spec = tokens[i + 1] ?? '';
@@ -495,6 +517,43 @@ function executeDocker(args: string[], state: DockerState): CommandResult {
 
     case 'compose': {
       return executeCompose(rest, state);
+    }
+
+    case 'container': {
+      if (rest[0] === 'prune') {
+        const next = cloneState(state);
+        const before = next.containers.length;
+        next.containers = next.containers.filter((c) => c.status === 'running');
+        for (const n of next.networks) {
+          const live = new Set(next.containers.map((c) => c.id));
+          n.containers = n.containers.filter((id) => live.has(id));
+        }
+        const removed = before - next.containers.length;
+        return ok(next, [
+          'WARNING! This will remove all stopped containers.',
+          `Deleted Containers: ${removed}`,
+        ]);
+      }
+      return fail(state, [`Unknown container subcommand: ${rest[0]}`]);
+    }
+
+    case 'image': {
+      if (rest[0] === 'prune') {
+        const next = cloneState(state);
+        const used = new Set(next.containers.map((c) => c.imageId));
+        const before = next.images.length;
+        next.images = next.images.filter((i) => used.has(i.imageId) || !i.dangling);
+        // also drop unreferenced non-dangling when -a
+        if (rest.includes('-a') || rest.includes('--all')) {
+          next.images = next.images.filter((i) => used.has(i.imageId));
+        }
+        const removed = before - next.images.length;
+        return ok(next, [
+          'WARNING! This will remove all dangling images.',
+          `Deleted Images: ${removed}`,
+        ]);
+      }
+      return fail(state, [`Unknown image subcommand: ${rest[0]}`]);
     }
 
     case 'system': {

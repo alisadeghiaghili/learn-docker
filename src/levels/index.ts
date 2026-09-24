@@ -11,20 +11,33 @@ import {
   QUIZZES,
   SECURITY_LEVELS,
 } from './catalog';
+import {
+  COMPOSE_PROD_LEVELS,
+  EXTRA_QUIZZES,
+  FAILURE_BANK,
+  HOOD_DRILLS,
+  SECURITY_DRILLS,
+} from './bank';
 
 export const LEVELS: LevelDefinition[] = [
   ...BASIC_LEVELS,
   ...BUILD_LEVELS,
   ...COMPOSE_LEVELS,
+  ...COMPOSE_PROD_LEVELS,
   ...DATA_LEVELS,
   ...NETWORK_LEVELS,
   ...OPS_LEVELS,
   ...SECURITY_LEVELS,
+  ...SECURITY_DRILLS,
   ...HOOD_LEVELS,
+  ...HOOD_DRILLS,
   ...FAILURE_LEVELS,
+  ...FAILURE_BANK,
 ];
 
-export { QUIZZES };
+export const QUIZ_BANK: QuizQuestion[] = [...QUIZZES, ...EXTRA_QUIZZES];
+
+export { QUIZZES, EXTRA_QUIZZES };
 
 export function getLevel(id: string): LevelDefinition | undefined {
   return LEVELS.find((l) => l.id === id);
@@ -47,22 +60,28 @@ export function levelsBySeries(): Array<{ series: string; levels: LevelDefinitio
 }
 
 export function getQuiz(id: string): QuizQuestion | undefined {
-  return QUIZZES.find((q) => q.id === id);
+  return QUIZ_BANK.find((q) => q.id === id);
 }
 
 export function quizzesForLevel(level: LevelDefinition): QuizQuestion[] {
-  return (level.quiz ?? []).map((id) => QUIZZES.find((q) => q.id === id)).filter(Boolean) as QuizQuestion[];
+  return (level.quiz ?? []).map((id) => QUIZ_BANK.find((q) => q.id === id)).filter(Boolean) as QuizQuestion[];
+}
+
+export function quizByIndex(index: number): QuizQuestion | undefined {
+  return QUIZ_BANK[index % QUIZ_BANK.length];
 }
 
 export const CURRICULUM_OUTCOMES = [
   'Explain image vs container vs writable layer with a correct ownership story',
   'Use lifecycle verbs (run/start/stop/rm) without conflating them',
   'Design cache-friendly Dockerfiles and ship multi-stage runtime images',
+  'Keep secrets out of image layers (runtime env / secret mounts)',
   'Model multi-service apps with compose, DNS, volumes, and depends_on limits',
+  'Wire healthcheck + condition: service_healthy instead of start-order races',
   'Publish ports deliberately (EXPOSE vs -p) and fix bind conflicts',
   'Persist data with named volumes and know when bind mounts are right',
-  'Operate: logs, exec, healthchecks, restart policies, prune with a map',
-  'Harden: non-root, slim bases, scan-first, no docker.sock in app containers',
-  'Debug failure classes from daemon messages (ports, image refs, health)',
-  'Describe namespaces/cgroups/union FS well enough to predict behavior',
+  'Operate: logs to stdout, exec, health, restart policies, scoped prune',
+  'Harden: non-root, cap-drop, read-only + tmpfs, slim/distroless bases, scan-first',
+  'Debug failure classes from daemon messages (ports, DNS, health, perms, image refs)',
+  'Describe namespaces/cgroups/union FS well enough to predict isolation and limits',
 ];

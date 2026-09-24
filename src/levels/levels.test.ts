@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { executeCommand } from '../engine/commands';
 import { applyLevelStart } from '../engine/session';
-import { LEVELS, getQuiz, quizzesForLevel, CURRICULUM_OUTCOMES } from '../levels';
+import {
+  LEVELS,
+  getQuiz,
+  quizzesForLevel,
+  CURRICULUM_OUTCOMES,
+  QUIZ_BANK,
+} from '../levels';
 import type { DockerState } from '../engine/types';
 
 function run(state: DockerState, ...cmds: string[]): DockerState {
@@ -49,9 +55,10 @@ describe('curriculum integrity', () => {
   });
 
   it('quiz bank is substantial and valid', () => {
+    expect(QUIZ_BANK.length).toBeGreaterThanOrEqual(25);
     expect(quizzesForLevel(level('build-multistage')).length).toBeGreaterThanOrEqual(2);
     expect(getQuiz('q-multistage')?.correct).toBe(1);
-    expect(CURRICULUM_OUTCOMES.length).toBeGreaterThanOrEqual(8);
+    expect(CURRICULUM_OUTCOMES.length).toBeGreaterThanOrEqual(10);
   });
 
   it('ids are unique', () => {
@@ -226,6 +233,85 @@ describe('level solutions', () => {
     expect(
       level('fail-image-in-use').check(
         run(failStart, 'docker rm -f web', 'docker rmi alpine:3.20'),
+      ),
+    ).toBe(true);
+  });
+
+  it('failure bank: dns, health, user-write, secrets, cap-drop, cgroup', () => {
+    const dnsStart = applyLevelStart(level('fail-dns'));
+    expect(level('fail-dns').check(dnsStart)).toBe(false);
+    expect(level('fail-dns').check(run(dnsStart, 'docker network connect app-net web'))).toBe(true);
+
+    const healthStart = applyLevelStart(level('fail-unhealthy'));
+    expect(level('fail-unhealthy').check(healthStart)).toBe(false);
+    expect(
+      level('fail-unhealthy').check(
+        run(
+          healthStart,
+          'docker rm -f web',
+          'docker run -d --name web --healthcheck "wget -qO- http://127.0.0.1:8080/health" nginx:1.25',
+        ),
+      ),
+    ).toBe(true);
+
+    const writeStart = applyLevelStart(level('fail-user-write'));
+    expect(
+      level('fail-user-write').check(
+        run(writeStart, 'docker run -d --name w2 --user app -v scratch:/app/out alpine:3.20'),
+      ),
+    ).toBe(true);
+
+    expect(
+      level('compose-secrets').check(
+        run(
+          applyLevelStart(level('compose-secrets')),
+          'docker run -d --name db -e DB_PASSWORD=demo postgres:16',
+        ),
+      ),
+    ).toBe(true);
+
+    expect(
+      level('sec-cap-drop').check(
+        run(
+          applyLevelStart(level('sec-cap-drop')),
+          'docker run -d --name hard --user app --read-only --cap-drop ALL --security-opt no-new-privileges -v scratch:/tmp alpine:3.20',
+        ),
+      ),
+    ).toBe(true);
+
+    expect(
+      level('hood-cgroup-limits').check(
+        run(
+          applyLevelStart(level('hood-cgroup-limits')),
+          'docker run -d --name batch --memory 256m --cpus 0.5 alpine:3.20',
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it('failure bank: prune keeps web+volume, disk logs cleaned, depends_on health', () => {
+    const pruneStart = applyLevelStart(level('fail-prune-regret'));
+    expect(level('fail-prune-regret').check(pruneStart)).toBe(false);
+    expect(
+      level('fail-prune-regret').check(
+        run(pruneStart, 'docker stop tmp', 'docker container prune'),
+      ),
+    ).toBe(true);
+
+    const logStart = applyLevelStart(level('fail-disk-logs'));
+    expect(level('fail-disk-logs').check(logStart)).toBe(false);
+    expect(
+      level('fail-disk-logs').check(run(logStart, 'docker rm -f web', 'docker run -d --name web nginx:1.25')),
+    ).toBe(true);
+
+    expect(
+      level('fail-dependson-race').check(
+        run(
+          applyLevelStart(level('fail-dependson-race')),
+          'docker rm -f db web',
+          'docker run -d --name db --healthcheck "pg_isready" postgres:16',
+          'docker run -d --name web --network app-net nginx:1.25',
+        ),
       ),
     ).toBe(true);
   });

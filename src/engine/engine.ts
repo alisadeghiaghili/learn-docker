@@ -145,6 +145,11 @@ export interface RunOptions {
   composeService?: string;
   composeProject?: string;
   entrypoint?: string;
+  capDrop?: string[];
+  capAdd?: string[];
+  noNewPrivileges?: boolean;
+  memSwap?: string;
+  securityOpt?: string[];
 }
 
 export function runContainer(
@@ -223,6 +228,11 @@ export function runContainer(
     composeProject: options.composeProject,
     logs: [],
     execHistory: [],
+    capDrop: options.capDrop,
+    capAdd: options.capAdd,
+    noNewPrivileges: options.noNewPrivileges,
+    memSwap: options.memSwap,
+    securityOpt: options.securityOpt,
   };
 
   if (image.repo === 'hello-world') {
@@ -605,6 +615,12 @@ export function describeContainer(c: Container): string {
     `Hostname: ${c.hostname}`,
     `User: ${c.user ?? 'root'}`,
     `Restart: ${c.restart ?? 'no'}`,
+    c.readOnly ? 'ReadonlyRootfs: true' : 'ReadonlyRootfs: false',
+    c.capDrop?.length ? `CapDrop: ${c.capDrop.join(',')}` : 'CapDrop: (default)',
+    c.capAdd?.length ? `CapAdd: ${c.capAdd.join(',')}` : '',
+    c.noNewPrivileges ? 'SecurityOpt: no-new-privileges' : '',
+    c.memLimit ? `Memory: ${c.memLimit}` : '',
+    c.cpus ? `Cpus: ${c.cpus}` : '',
     c.ports.length
       ? `Ports: ${c.ports.map((p) => `${p.hostPort}->${p.containerPort}/${p.protocol}`).join(', ')}`
       : 'Ports: (none)',

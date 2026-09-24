@@ -141,7 +141,15 @@ export function applyLevelStart(level: LevelDefinition | undefined): DockerState
       if (!state.volumes.find((x) => x.name === v)) state = createVolume(state, v);
     }
   }
+  for (const vName of start.volumes ?? []) {
+    if (!state.volumes.find((x) => x.name === vName)) state = createVolume(state, vName);
+  }
   if (start.containers) {
+    for (const netName of start.containers.flatMap((c) => c.networks ?? [])) {
+      if (!['bridge', 'host', 'none'].includes(netName) && !state.networks.find((n) => n.name === netName)) {
+        state = createNetwork(state, netName);
+      }
+    }
     for (const spec of start.containers) {
       const catalog = findRegistryImage(spec.image);
       if (catalog && !state.images.find((i) => i.name === catalog.name)) {
@@ -164,9 +172,33 @@ export function applyLevelStart(level: LevelDefinition | undefined): DockerState
         network: spec.networks?.[0],
         env: spec.env ?? {},
         command: spec.command ? spec.command.split(' ') : undefined,
+        healthcheck: spec.healthcheck,
+        user: spec.user,
+        readOnly: spec.readOnly,
+        restart: spec.restart,
       });
       state = result.state;
+      const created = result.container;
+      if (spec.networks && spec.networks.length > 1) {
+        for (const netName of spec.networks.slice(1)) {
+          if (!state.networks.find((n) => n.name === netName)) {
+            state = createNetwork(state, netName);
+          }
+          const net = state.networks.find((n) => n.name === netName);
+          if (net && !net.containers.includes(created.id)) net.containers.push(created.id);
+          if (!created.networks.includes(netName)) created.networks.push(netName);
+        }
+      }
+      if (spec.volumeData) {
+        created.volumeData = { ...created.volumeData, ...spec.volumeData };
+      }
+      if (spec.logs) {
+        created.logs = [...created.logs, ...spec.logs];
+      }
     }
+  }
+  if (start.broken && start.files) {
+    state.files = { ...state.files, ...start.files };
   }
   return state;
 }

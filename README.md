@@ -34,13 +34,14 @@ GITHUB_PAGES=true npm run build
 
 ## What works
 
-- Sandbox mode with simulated `docker` commands
-- Levels with teaching notes, step checklists, and command golf (par)
+- Sandbox mode with simulated `docker` commands (run/build/compose/exec/scan/prune/…)
+- **35+ levels** across Basics, Build, Compose, Data, Networks, Ops, Security, Under the hood, Failure labs
+- Teaching notes, step checklists, field notes, outcomes per level
 - Level-clear celebration with LinkedIn / X / Facebook share + learned curriculum list
 - Word-wise Tab completion, ↑/↓ command history, sticky prompt focus
 - Progress saved in `localStorage` + cookie (resume next week)
+- Concept quiz bank (`quiz`, `checkpoint`) with explanations
 - `undo` / `reset`, object inspector
-- Images, containers, volumes, networks, port publish, `docker build` layers
 
 ## Scope
 

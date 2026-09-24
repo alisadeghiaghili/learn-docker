@@ -16,7 +16,7 @@ import {
   loadProgress,
   recordSolve,
 } from '../engine/session';
-import { QUIZZES, quizzesForLevel } from '../levels';
+import { QUIZ_BANK, quizzesForLevel, quizByIndex } from '../levels';
 import type { LogLine } from './Terminal';
 
 export type AppMode = 'sandbox' | 'level';
@@ -378,9 +378,25 @@ function handleSubmit(state: AppState, rawInput: string): AppState {
       focusToken,
     };
   }
-  if (input === 'quiz' || input.startsWith('quiz ')) {
+  if (input === 'quiz' || input.startsWith('quiz ') || input === 'checkpoint') {
     const level = currentLevel(state);
-    const q = level?.quiz?.length ? quizzesForLevel(level)[0] : QUIZZES[0];
+    if (input === 'checkpoint') {
+      const qs = level?.quiz?.length ? quizzesForLevel(level) : QUIZ_BANK.slice(0, 3);
+      return {
+        ...state,
+        lines: pushLines(
+          [...state.lines, lineIn],
+          [
+            `Checkpoint — ${level?.name ?? 'curriculum'} (${qs.length} questions)`,
+            ...qs.map((q, i) => `${i + 1}. ${q.question}`),
+            'Answer each with: quiz A | quiz B | quiz C',
+          ],
+          'out',
+        ),
+        focusToken,
+      };
+    }
+    const q = level?.quiz?.length ? quizzesForLevel(level)[0] : quizByIndex(0);
     if (!q) {
       return {
         ...state,
