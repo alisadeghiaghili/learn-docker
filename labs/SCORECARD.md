@@ -1,6 +1,30 @@
 # Authenticity Scorecard
 
-Fill this after `labs/run-all.ps1` (Windows) or `labs/run-all.sh`.
+Fill after `labs/run-all.ps1` (Windows) or `labs/run-all.sh` on a machine with Docker Server running.
+
+## Current status (this machine)
+
+| Item | Value |
+|------|--------|
+| Docker CLI | 29.8.0 present |
+| Docker Desktop | installed / processes running |
+| WSL2 | 2.7.14 |
+| Virtual Machine Platform | **enabled pending reboot** (`wsl --install --no-distribution` succeeded) |
+| Engine (Server) | **NOT UP** — `docker info` has no Server; CLI hangs |
+| Labs executed | **0 / 12** |
+| Authenticated authenticity score | **0 / 24 — BLOCKED** |
+
+Do **not** treat UI-only progress as authenticity credit.
+
+## After reboot
+
+```powershell
+# 1) confirm server
+docker version
+# 2) run labs
+.\labs\run-all.ps1
+# 3) score each lab 0–2 in the table below
+```
 
 | Lab | 0–2 | Notes |
 |-----|-----|-------|
@@ -20,6 +44,6 @@ Fill this after `labs/run-all.ps1` (Windows) or `labs/run-all.sh`.
 
 - **≥ 20** — authenticity 9/10 territory
 - **16–19** — solid 8
-- **≤ 15** — simulator-only; retake on a live daemon
+- **≤ 15** — retake on a live daemon
 
-Also record: Docker Desktop vs engine-only, OS, `docker version` Server line.
+Also record: Desktop vs engine-only, OS, `docker version` Server line.
