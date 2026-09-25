@@ -93,8 +93,9 @@ export function IntroDialog({
           understanding Docker, not just typing it.
         </p>
         <p>
-          Sandbox mode is empty by default. Open <strong>levels</strong> for a guided curriculum
-          with teaching notes. Progress is saved in this browser.
+          <strong>Track A</strong> (this site): mental models and commands in a simulator.
+          <strong> Track B</strong> (your laptop): install Docker, run <code>labs/run-all.ps1</code>
+          on a real daemon. Start with the <strong>Setup</strong> levels.
         </p>
         <pre className="intro-snippet">
           docker pull alpine:3.20{'\n'}

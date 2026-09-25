@@ -21,8 +21,10 @@ import {
 import { REGISTRY_LEVELS, REGISTRY_QUIZZES } from './registry-pack';
 import { REGISTRY_ADV_LEVELS, REGISTRY_ADV_QUIZZES } from './registry-adv';
 import { COVERAGE_LEVELS, COVERAGE_QUIZZES } from './coverage-pack';
+import { SETUP_LEVELS } from './setup-pack';
 
 export const LEVELS: LevelDefinition[] = [
+  ...SETUP_LEVELS,
   ...BASIC_LEVELS,
   ...BUILD_LEVELS,
   ...REGISTRY_LEVELS,

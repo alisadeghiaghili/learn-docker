@@ -373,6 +373,15 @@ describe('level solutions', () => {
     ).toBe(true);
   });
 
+  it('setup pack teaches install + track B without faking authenticity', () => {
+    const setups = LEVELS.filter((l) => l.series === 'Setup');
+    expect(setups.length).toBeGreaterThanOrEqual(5);
+    expect(LEVELS[0]!.id.startsWith('setup-')).toBe(true);
+    const install = setups.find((l) => l.id === 'setup-install-windows');
+    expect(install?.teaching).toMatch(/docker version/);
+    expect(install?.teaching).toMatch(/WSL/);
+  });
+
   it('assessment bank has rubric + spaced review depth', async () => {
     const { RUBRIC_QUESTIONS, SPACED_REVIEW, reviewDue } = await import('../engine/assessment');
     expect(RUBRIC_QUESTIONS.length).toBeGreaterThanOrEqual(12);

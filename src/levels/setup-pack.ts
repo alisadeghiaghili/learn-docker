@@ -1,0 +1,246 @@
+import type { LevelDefinition } from '../engine/types';
+
+function steps(...items: Array<[string, string] | [string, string, true]>): LevelDefinition['steps'] {
+  return items.map((item) => ({ command: item[0], note: item[1], optional: item[2] === true }));
+}
+
+function text(...lines: string[]): string {
+  return lines.join('\n');
+}
+
+/**
+ * Onboarding track: install + first real-daemon steps.
+ * These levels complete in-app as a guided checklist; each CHECK
+ * is something the learner does on their machine (see labs/).
+ */
+export const SETUP_LEVELS: LevelDefinition[] = [
+  {
+    id: 'setup-why-layers',
+    name: '00 · Why this course is hybrid',
+    series: 'Setup',
+    difficulty: 1,
+    brief: 'Understand the split: web app teaches models; your laptop runs the real daemon.',
+    teaching: text(
+      'This site runs in your browser on GitHub Pages. Browsers cannot start dockerd.',
+      '',
+      'Two tracks:',
+      '  Track A (here) — mental models, command shapes, failure stories, quizzes',
+      '  Track B (laptop) — real Docker Engine/Desktop, pull latency, binds, perms',
+      '',
+      'You need BOTH. Track A without B is theory. Track B without A is cargo-cult copy-paste.',
+      '',
+      'This level is free: mark done when you can explain the split to a friend in 30 seconds.',
+    ),
+    steps: steps(
+      ['levels', 'See the map: Setup series first, then Basics.'],
+      ['help', 'Command surface of the simulator.'],
+    ),
+    fieldNotes: [
+      'LearnGitBranching-style apps teach git without a repo; we teach Docker without a daemon.',
+      'Scorecard: Real column only from Track B.',
+    ],
+    learning: [
+      'Why a simulator exists',
+      'Hybrid learning model',
+      'Where authenticity is measured',
+    ],
+    hint: 'levels',
+    par: 1,
+    check: () => true,
+  },
+  {
+    id: 'setup-install-windows',
+    name: '01 · Install Docker (Windows)',
+    series: 'Setup',
+    difficulty: 2,
+    brief: 'Install Docker Desktop with WSL2, enable virtualization, verify Server is up.',
+    teaching: text(
+      'Step-by-step (Windows 10/11):',
+      '1. Enable virtualization in firmware (VT-x / SVM) if BIOS has it off',
+      '2. Install Docker Desktop from docker.com/products/docker-desktop',
+      '3. Install WSL2 backend (Desktop usually does this; or wsl --install --no-distribution)',
+      '4. Reboot if prompted (Virtual Machine Platform needs it)',
+      '5. Start Docker Desktop and wait until the whale is stable',
+      '6. PowerShell: docker version  — look for Server: section',
+      '',
+      'If Server is missing or CLI hangs:',
+      '- WSL virtualization not enabled (message from wsl --status)',
+      '- Desktop still starting (give it 1–2 minutes)',
+      '- Engine settings switched away from WSL2',
+      '',
+      'Do not continue the Real track until Server is present.',
+    ),
+    steps: steps(
+      ['docker version', 'PASS when you see a Server: block (not Client-only).'],
+      ['docker info', 'PASS when Containers/Images lines print without hanging.'],
+    ),
+    fieldNotes: [
+      'Linux users: install docker-ce + start docker.service; add user to docker group.',
+      'macOS: Docker Desktop or colima; still want docker version Server.',
+      'Corporate machines: you may need admin rights for virtualization features.',
+    ],
+    learning: [
+      'Desktop vs Engine install path',
+      'WSL2 + virtualization prerequisites',
+      'How to verify a healthy daemon',
+    ],
+    hint: 'docker version\ndocker info',
+    par: 2,
+    check: (s) => s.files['INSTALL_NOTES'] !== undefined || s.nextContainerSeq >= 0,
+  },
+  {
+    id: 'setup-install-checklist',
+    name: '02 · Local checklist before first run',
+    series: 'Setup',
+    difficulty: 2,
+    brief: 'Walk the readiness checklist on your machine (not in the browser).',
+    teaching: text(
+      'Readiness checklist (tick on paper / notes):',
+      '[ ] docker version shows Client and Server',
+      '[ ] docker ps returns empty table without error',
+      '[ ] docker pull hello-world succeeds (network + auth if needed)',
+      '[ ] docker run --rm hello-world prints Hello from Docker',
+      '[ ] You know how to restart Docker Desktop / systemctl restart docker',
+      '',
+      'Common first failures:',
+      '- HTTP proxy / corporate TLS interception',
+      '- WSL disk full / Docker Desktop disk allocation',
+      '- Hyper-V conflict with other VMs',
+      '',
+      'This in-app level is complete when you have done the checklist on the laptop and can run Track B labs.',
+    ),
+    steps: steps(
+      ['docker pull hello-world', 'On YOUR machine — proves registry + network.'],
+      ['docker run --rm hello-world', 'On YOUR machine — proves create + run + rm.'],
+    ),
+    fieldNotes: [
+      '--rm cleans up one-shot containers automatically.',
+      'If pull hangs: DNS, proxy, or rate limit.',
+    ],
+    learning: [
+      'Local environment readiness',
+      'First pull/run failure modes',
+      'Difference: sim run vs real run',
+    ],
+    hint: 'docker pull hello-world\ndocker run --rm hello-world',
+    par: 2,
+    check: (s) => s.containers.length >= 0,
+  },
+  {
+    id: 'setup-track-b-path',
+    name: '03 · Map Track B (real labs)',
+    series: 'Setup',
+    difficulty: 2,
+    brief: 'Learn the 12 real labs path and how the scorecard is graded.',
+    teaching: text(
+      'After install, Track B is a fixed path (see repo folder labs/):',
+      '  01 hello → 02 two containers → 03 lifecycle',
+      '  04 multi-stage → 05 volume → 06 network DNS',
+      '  07 ports → 08 logs/exec → 09 health',
+      '  10 port conflict → 11 digest → 12 release gate',
+      '',
+      'Grading: each lab 0–2 on labs/SCORECARD.md (Real column only).',
+      'Authenticity 9/10 requires Real total ≥ 20/24.',
+      '',
+      'If the repo is not cloned yet:',
+      '  git clone <this repo> && cd learn-docker && labs\\run-all.ps1',
+      '',
+      'In the browser you can still rehearse every command in Sandbox — then run it for real.',
+    ),
+    steps: steps(
+      ['help', 'Rehearse simulator commands.'],
+      ['levels', 'Do Basics/Build while waiting for daemon install.'],
+    ),
+    fieldNotes: [
+      'Parallel path: do UI levels on day 1; Track B as soon as Server is up.',
+      'Never score Real from mock (labs/run-mock.ps1).',
+    ],
+    learning: [
+      'Curriculum map (UI + real labs)',
+      'Scorecard grading rules',
+      'How to rehearse then execute',
+    ],
+    hint: 'help\nlevels',
+    par: 2,
+    check: () => true,
+  },
+  {
+    id: 'setup-first-real-run',
+    name: '04 · First real commands (guided)',
+    series: 'Setup',
+    difficulty: 3,
+    brief: 'Run the first real command block on your machine and compare with the simulator.',
+    teaching: text(
+      'Copy-paste block for a live terminal (PowerShell or bash):',
+      '',
+      '  docker pull alpine:3.20',
+      '  docker run -d --name ld-first alpine:3.20 sleep 300',
+      '  docker ps',
+      '  docker inspect ld-first --format "{{.Name}} {{.Image}}"',
+      '  docker stop ld-first && docker rm ld-first',
+      '',
+      'While it runs, do the SAME names in this web app Sandbox.',
+      'Compare outputs: sim is faster/cleaner; real shows pull bars, exact daemon errors.',
+      '',
+      'Learning goal: stop being surprised by real CLI noise.',
+    ),
+    steps: steps(
+      ['docker pull alpine:3.20', 'In web app (rehearsal).'],
+      ['docker run -d --name ld-first alpine:3.20', 'In web app, then the same on laptop.'],
+      ['docker rm -f ld-first', 'Cleanup both sides.'],
+    ),
+    fieldNotes: [
+      'sleep 300 keeps alpine alive so you can ps/inspect.',
+      'Name collisions: Conflict. The container name is already in use.',
+    ],
+    learning: [
+      'Sim vs real output texture',
+      'Detach + inspect + cleanup loop',
+      'Habit: name your lab containers (ld-*)',
+    ],
+    hint: 'docker pull alpine:3.20\ndocker run -d --name ld-first alpine:3.20 sleep 300',
+    par: 3,
+    start: { prePulled: ['alpine:3.20'] },
+    check: (s) => {
+      const c = s.containers.find((x) => x.name === 'ld-first');
+      return Boolean(c) || s.nextContainerSeq >= 1;
+    },
+  },
+  {
+    id: 'setup-week-plan',
+    name: '05 · Your 7-day plan',
+    series: 'Setup',
+    difficulty: 1,
+    brief: 'Commit to a schedule that actually sticks (UI + real + review).',
+    teaching: text(
+      'A plan that works better than binge-watching:',
+      '',
+      'Day 1 — Setup levels 00–03 + Basics 3 levels (UI)',
+      'Day 2 — Track B labs 01–04 + Build levels (UI + laptop)',
+      'Day 3 — Data + Networks (UI) + labs 05–07',
+      'Day 4 — Ops + logs/health + labs 08–09',
+      'Day 5 — Registry pack + lab 11–12 draft',
+      'Day 6 — Failure labs + rubric essays (3 of them)',
+      'Day 7 — Capstone compose on laptop + scorecard review',
+      '',
+      'Every day: finish with the `review` command (spaced prompts).',
+      'Stop when you can teach image-vs-container without notes.',
+    ),
+    steps: steps(
+      ['review', 'See spaced review prompts.'],
+      ['rubric', 'See essay prompts for self-test.'],
+    ),
+    fieldNotes: [
+      'Consistency beats length: 45 minutes daily > 6 hours Sunday.',
+      'Teach-back is the highest-yield review.',
+    ],
+    learning: [
+      'Spaced practice plan',
+      'UI + real lab interleaving',
+      'Teach-back as retention tool',
+    ],
+    hint: 'review\nrubric',
+    par: 2,
+    check: () => true,
+  },
+];

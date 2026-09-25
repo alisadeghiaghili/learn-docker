@@ -151,6 +151,7 @@ export interface LevelStep {
 }
 
 export type LevelPack =
+  | 'Setup'
   | 'Basics'
   | 'Build'
   | 'Registry'
