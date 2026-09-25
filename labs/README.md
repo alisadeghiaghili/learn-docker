@@ -24,7 +24,7 @@ If Server is missing, start Docker Desktop / `systemd start docker` first.
 
 Each lab has a `CHECK` section. A **pass** is:
 
-1. Commands ran against **real** `docker` (not the web app)
+1. Commands ran against **real** `docker` (not the web app, not mock)
 2. You can explain the output in one sentence
 3. Cleanup ran (or you justify leaving containers)
 
@@ -34,9 +34,19 @@ Score per lab 0–2:
 - 1 — ran with hints / partial
 - 0 — skipped or only used the simulator
 
-**Real-track pass = 12 labs × 2 = 24.** Target for authenticity 9/10: **≥ 20/24**.
+**Real-track pass = 12 labs × 2 = 24.** Target for authenticity 9/10: **≥ 20/24 Real**.
+
+### Mock mode (CI only)
+
+```powershell
+.\labs\run-mock.ps1          # smoke-test scripts with labs/mock/docker.cmd
+.\labs\run-all.ps1           # real daemon
+```
+
+Mock validates that lab scripts are runnable. It **never** fills the Real column on the scorecard.
 
 ## Why this exists
 
 Simulator cannot reproduce: pull latency, build cache warmth, port binds on a live host,
 bind-mount permissions on your UID, `exec -it`, log volume on disk, wrong daemon via context.
+
