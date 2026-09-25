@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import {
   appReducer,
   createInitialState,
@@ -9,59 +9,161 @@ import { Schematic } from './ui/Schematic';
 import { Terminal } from './ui/Terminal';
 import { HelpDialog, IntroDialog, LevelsDialog } from './ui/Dialogs';
 import { CelebrateModal } from './ui/CelebrateModal';
-import { getLevel, LEVELS } from './levels';
+import { BrandMark } from './ui/BrandMark';
+import { getLevel, LEVELS, getNextLevel } from './levels';
 import './styles/app.css';
+
+type NavAction =
+  | 'levels'
+  | 'hint'
+  | 'steps'
+  | 'curriculum'
+  | 'rubric'
+  | 'review'
+  | 'mastery'
+  | 'undo'
+  | 'reset'
+  | 'sandbox'
+  | 'help'
+  | 'lesson';
 
 export default function App() {
   const [state, dispatch] = useReducer(appReducer, undefined, createInitialState);
+  const [navOpen, setNavOpen] = useState(false);
   const level = state.levelId ? getLevel(state.levelId) : undefined;
   const selected = useMemo(() => selectedObject(state), [state]);
   const solvedCount = getSolvedCount(state.progress);
   const celebrateLevel = state.celebrateLevelId ? getLevel(state.celebrateLevelId) : null;
-  const celebratedRef = useRef<string | null>(null);
+  const nextLevel = level ? getNextLevel(level.id) : LEVELS[0];
 
   useEffect(() => {
-    if (!state.showCelebrate || !celebrateLevel) return;
-    if (celebratedRef.current === `${celebrateLevel.id}:${state.commandCount}`) return;
-    celebratedRef.current = `${celebrateLevel.id}:${state.commandCount}`;
-  }, [state.showCelebrate, celebrateLevel, state.commandCount]);
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNavOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navOpen]);
 
-  const currentStepIndex = useMemo(() => {
-    if (!level) return -1;
-    if (level.check(state.state)) return level.steps.length;
-    // Find first non-optional step not yet reflected — reuse hint string match
-    const hint = state.hint;
-    const idx = level.steps.findIndex((s) => !s.optional && s.command === hint);
-    return idx >= 0 ? idx : 0;
-  }, [level, state.state, state.hint]);
+  const runNav = (action: NavAction) => {
+    setNavOpen(false);
+    switch (action) {
+      case 'levels':
+        dispatch({ type: 'OPEN_LEVELS', open: true });
+        break;
+      case 'undo':
+        dispatch({ type: 'UNDO' });
+        break;
+      case 'reset':
+        dispatch({ type: 'RESET' });
+        break;
+      case 'sandbox':
+        dispatch({ type: 'START_SANDBOX' });
+        break;
+      case 'help':
+        dispatch({ type: 'OPEN_HELP', open: true });
+        break;
+      case 'hint':
+      case 'steps':
+      case 'curriculum':
+      case 'rubric':
+      case 'review':
+      case 'mastery':
+        dispatch({ type: 'SUBMIT', input: action });
+        break;
+      case 'lesson':
+        if (level?.teaching) {
+          dispatch({ type: 'SUBMIT', input: 'curriculum' });
+        } else {
+          dispatch({ type: 'OPEN_HELP', open: true });
+        }
+        break;
+    }
+  };
 
   return (
     <div className="app">
       <header className="toolbar">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden />
-          learnDocker
+        <div className="brand" title="learnDocker">
+          <BrandMark size={30} />
+          <div className="brand-text">
+            <div className="brand-name">
+              learn<span className="brand-accent">Docker</span>
+            </div>
+            <div className="brand-sub">interactive visualizer · tutorial</div>
+          </div>
         </div>
-        <span className={`mode-pill${state.mode === 'level' ? ' level' : ''}`}>
-          {state.mode === 'level' ? `level · ${level?.name ?? ''}` : 'sandbox'}
-        </span>
+
+        <div className="level-title" title={level?.name ?? 'Sandbox'}>
+          <span className="level-title-mode">
+            {state.mode === 'level' ? (level?.series ?? 'Level') : 'Sandbox'}
+          </span>
+          <span className="level-title-name">
+            {state.mode === 'level' ? (level?.name ?? '') : 'Free play — empty daemon'}
+          </span>
+        </div>
+
         <div className="toolbar-actions">
-          <button type="button" onClick={() => dispatch({ type: 'OPEN_LEVELS', open: true })}>
-            levels
+          <button type="button" className="tb-btn primary" onClick={() => runNav('levels')}>
+            Levels
+          </button>
+          <button type="button" className="tb-btn" onClick={() => runNav('hint')} title="Hint">
+            Hint
+          </button>
+          <button type="button" className="tb-btn ghost" onClick={() => runNav('help')} aria-label="Help">
+            ?
           </button>
           <button
             type="button"
-            onClick={() => dispatch({ type: 'UNDO' })}
-            disabled={state.historyStack.length === 0}
+            className={`tb-btn nav-toggle${navOpen ? ' is-open' : ''}`}
+            aria-expanded={navOpen}
+            aria-controls="nav-drawer"
+            aria-label="Menu"
+            onClick={() => setNavOpen((v) => !v)}
           >
-            undo
+            <span className="nav-bars" aria-hidden="true" />
           </button>
-          <button type="button" onClick={() => dispatch({ type: 'RESET' })}>
-            reset
-          </button>
-          <button type="button" className="ghost" onClick={() => dispatch({ type: 'OPEN_HELP', open: true })}>
-            help
-          </button>
+          {navOpen && (
+            <div className="nav-drawer" id="nav-drawer" role="menu">
+              <button type="button" role="menuitem" onClick={() => runNav('levels')}>
+                Levels
+              </button>
+              <button type="button" role="menuitem" onClick={() => runNav('lesson')}>
+                Lesson text
+              </button>
+              <button type="button" role="menuitem" onClick={() => runNav('hint')}>
+                Hint
+              </button>
+              <button type="button" role="menuitem" onClick={() => runNav('steps')}>
+                Steps
+              </button>
+              <button type="button" role="menuitem" onClick={() => runNav('curriculum')}>
+                Outcomes
+              </button>
+              <button type="button" role="menuitem" onClick={() => runNav('mastery')}>
+                Mastery map
+              </button>
+              <button type="button" role="menuitem" onClick={() => runNav('rubric')}>
+                Rubric essays
+              </button>
+              <button type="button" role="menuitem" onClick={() => runNav('review')}>
+                Spaced review
+              </button>
+              <hr />
+              <button type="button" role="menuitem" onClick={() => runNav('undo')}>
+                Undo
+              </button>
+              <button type="button" role="menuitem" onClick={() => runNav('reset')}>
+                Reset
+              </button>
+              <button type="button" role="menuitem" onClick={() => runNav('sandbox')}>
+                Sandbox
+              </button>
+              <button type="button" role="menuitem" onClick={() => runNav('help')}>
+                Help & tracks
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -126,8 +228,8 @@ export default function App() {
                   <div className="next-title">Steps</div>
                   <ul>
                     {level.steps.map((step, i) => {
-                      const isDone = level.check(state.state) || i < currentStepIndex;
-                      const isCurrent = !level.check(state.state) && i === currentStepIndex;
+                      const isDone = level.check(state.state) || i < currentStepIndex(level, state as never);
+                      const isCurrent = !level.check(state.state) && i === currentStepIndex(level, state as never);
                       return (
                         <li
                           key={`${step.command}-${i}`}
@@ -154,6 +256,21 @@ export default function App() {
                     {level.hint}
                   </div>
                 )}
+                <div className="next-box">
+                  <div className="next-title">Next</div>
+                  <button type="button" className="primary" onClick={() => runNav('hint')}>
+                    Show next command
+                  </button>
+                  {nextLevel ? (
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => dispatch({ type: 'START_LEVEL', levelId: nextLevel.id })}
+                    >
+                      Skip → {nextLevel.name}
+                    </button>
+                  ) : null}
+                </div>
               </>
             ) : (
               <>
@@ -166,9 +283,17 @@ export default function App() {
                 <h2>Free play</h2>
                 <p>
                   Empty simulated daemon. Pull images, run containers, mount volumes, wire
-                  networks. Type <code>levels</code> when you want a guided path. Progress is saved
-                  in this browser (cookie + local storage).
+                  networks. Type <code>levels</code> for the guided path (Start with{' '}
+                  <strong>Setup</strong>). Progress is saved in this browser.
                 </p>
+                <div className="learning-box">
+                  <div className="next-title">Start here</div>
+                  <ul>
+                    <li>Open Levels → Setup 00–05</li>
+                    <li>Then Basics while Track B installs on your machine</li>
+                    <li>Run labs/run-all.ps1 when Docker Server is up</li>
+                  </ul>
+                </div>
               </>
             )}
           </div>
@@ -224,6 +349,13 @@ export default function App() {
       ) : null}
     </div>
   );
+}
+
+function currentStepIndex(level: ReturnType<typeof getLevel>, state: { state: never; hint: string | null }) {
+  if (!level) return -1;
+  if (level.check(state.state)) return level.steps.length;
+  const idx = level.steps.findIndex((s) => !s.optional && s.command === state.hint);
+  return idx >= 0 ? idx : 0;
 }
 
 function formatSelection(selected: NonNullable<ReturnType<typeof selectedObject>>): string {
