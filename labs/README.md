@@ -2,6 +2,8 @@
 
 The in-app engine teaches **models**. This track teaches **muscle memory and daemon friction**.
 
+**Why on your machine?** The course is served from GitHub Pages (static web). A browser page cannot start `dockerd`, open the Docker socket, or give you a privileged Linux engine. Authenticity and muscle memory only exist on a computer where Docker **Server** is running — your laptop or VM.
+
 Run these on a machine with Docker Engine or Docker Desktop (`docker version` shows a **Server** section).
 If Server is missing, start Docker Desktop / `systemd start docker` first.
 

@@ -94,8 +94,9 @@ export function IntroDialog({
         </p>
         <p>
           <strong>Track A</strong> (this site): mental models and commands in a simulator.
-          <strong> Track B</strong> (your laptop): install Docker, run <code>labs/run-all.ps1</code>
-          on a real daemon. Start with the <strong>Setup</strong> levels.
+          <strong> Track B</strong> (your computer): install Docker and run{' '}
+          <code>labs/run-all.ps1</code> — the web cannot start a real daemon (GitHub Pages is
+          static). Start with the <strong>Setup</strong> levels.
         </p>
         <pre className="intro-snippet">
           docker pull alpine:3.20{'\n'}
