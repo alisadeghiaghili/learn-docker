@@ -711,14 +711,120 @@ code {
   color: var(--muted);
 }
 
-.intro-snippet {
+/* Intro — LearnDVC-style welcome */
+.overlay-intro {
+  background: rgba(8, 10, 20, 0.78);
+}
+
+.modal-intro {
+  width: min(720px, 100%);
+  border-color: rgba(167, 139, 250, 0.35);
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.12), 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.intro-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.intro-head h2 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: -0.03em;
+}
+
+.modal-intro > p {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.modal-intro p {
+  color: var(--ink);
+}
+
+.intro-bullets {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.intro-bullets li {
+  margin-bottom: 4px;
+}
+
+.chip-cmd {
+  display: inline-block;
   font-family: var(--mono);
-  font-size: 12px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 10px 12px;
-  color: var(--muted);
+  font-size: 12.5px;
+  background: rgba(36, 150, 237, 0.12);
+  border: 1px solid rgba(36, 150, 237, 0.35);
+  color: #93c5fd;
+  border-radius: 5px;
+  padding: 1px 7px;
+  margin: 0 1px;
+  vertical-align: baseline;
+}
+
+.intro-meta {
+  font-size: 13.5px !important;
+  line-height: 2.1 !important;
+}
+
+.intro-h3 {
+  margin: 16px 0 6px;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.intro-links {
+  margin: 4px 0 12px;
+  padding-left: 20px;
+}
+
+.intro-links a,
+.modal-intro a {
+  color: #c4b5fd;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.coffee-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #2a3a4a !important;
+  color: #fff !important;
+  text-decoration: none !important;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.coffee-btn:hover {
+  filter: brightness(1.08);
+}
+
+.intro-toolbar {
+  font-size: 13px !important;
+  color: var(--muted) !important;
+  margin-top: 14px !important;
+}
+
+.intro-cta {
+  background: #7c6cf0 !important;
+  border-color: #7c6cf0 !important;
+  color: #fff !important;
+  font-size: 14px;
+  padding: 10px 18px;
 }
 
 .level-series {

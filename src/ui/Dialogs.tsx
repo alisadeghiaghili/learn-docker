@@ -1,5 +1,13 @@
-import { levelsBySeries } from '../levels';
+import { levelsBySeries, LEVELS } from '../levels';
 import type { AppProgress } from '../engine/types';
+import { BrandMark } from './BrandMark';
+const REPO_URL = 'https://github.com/alisadeghiaghili/learn-docker';
+const COFFEE_URL = 'https://www.buymeacoffee.com/alisadeghil';
+const LINKTR = 'https://linktr.ee/aliaghili';
+
+function C({ children }: { children: string }) {
+  return <code className="chip-cmd">{children}</code>;
+}
 
 interface Props {
   open: boolean;
@@ -10,14 +18,7 @@ interface Props {
   onStartSandbox: () => void;
 }
 
-export function LevelsDialog({
-  open,
-  progress,
-  activeLevelId,
-  onClose,
-  onStartLevel,
-  onStartSandbox,
-}: Props) {
+export function LevelsDialog({ open, progress, activeLevelId, onClose, onStartLevel, onStartSandbox }: Props) {
   if (!open) return null;
   const series = levelsBySeries();
 
@@ -58,7 +59,7 @@ export function LevelsDialog({
         ))}
         <div className="modal-actions">
           <button type="button" onClick={onStartSandbox}>
-            Sandbox mode
+            Sandbox
           </button>
           <button type="button" className="primary" onClick={onClose}>
             Close
@@ -79,43 +80,107 @@ export function IntroDialog({
   onOpenLevels: () => void;
 }) {
   if (!open) return null;
+
   return (
-    <div className="modal-backdrop" role="presentation">
-      <div className="modal" role="dialog" aria-label="Welcome">
-        <h2>learnDocker</h2>
+    <div className="modal-backdrop overlay-intro" role="presentation">
+      <div className="modal modal-intro" role="dialog" aria-label="Welcome">
+        <div className="intro-head">
+          <BrandMark size={36} />
+          <h2>
+            Learn<span className="brand-accent">Docker</span>
+          </h2>
+        </div>
+
         <p>
-          Interactive Docker visualizer and tutorial. Type Docker CLI commands in the terminal and
-          watch the simulated daemon state update.
+          Interactive <strong>Docker</strong> tutorial — sandbox + guided levels.
         </p>
+
         <p>
-          This is a simulator — nothing runs on your machine. The goal is to make invisible
-          concepts (image layers, writable layers, volumes, networks, ports) visible so you leave
-          understanding Docker, not just typing it.
+          The board shows <strong>Registry → Images → Containers</strong> and the volumes / networks
+          they share. That is the material flow a Docker daemon manages.
         </p>
+
+        <ul className="intro-bullets">
+          <li>
+            Basics: <C>run</C>, <C>ps</C>, <C>stop</C>, image vs container
+          </li>
+          <li>
+            Build: <C>build</C>, <C>layers</C>, multi-stage
+          </li>
+          <li>
+            Registry: <C>pull</C>, <C>tag</C>, <C>push</C>, digests
+          </li>
+          <li>
+            Compose: <C>compose up</C>, <C>down</C>, DNS, volumes
+          </li>
+          <li>
+            Ops: <C>logs</C>, <C>exec</C>, health, prune
+          </li>
+          <li>
+            Security: <C>--user</C>, <C>--read-only</C>, scan/sign gate
+          </li>
+        </ul>
+
+        <p className="intro-meta">
+          Meta:{' '}
+          <C>levels</C>, <C>curriculum</C>, <C>mastery</C>, <C>hint</C>, <C>steps</C>, <C>rubric</C>,{' '}
+          <C>review</C>, <C>quiz</C>.
+        </p>
+
         <p>
-          <strong>Track A</strong> (this site): mental models and commands in a simulator.
-          <strong> Track B</strong> (your computer): install Docker and run{' '}
-          <code>labs/run-all.ps1</code> — the web cannot start a real daemon (GitHub Pages is
-          static). Start with the <strong>Setup</strong> levels.
+          <strong>{LEVELS.length}</strong> levels included. Open Levels to begin (start with{' '}
+          <strong>Setup</strong>), or stay in sandbox.
         </p>
-        <pre className="intro-snippet">
-          docker pull alpine:3.20{'\n'}
-          docker run -d --name web alpine:3.20{'\n'}
-          docker ps
-        </pre>
+
+        <h3 className="intro-h3">What is LearnDocker?</h3>
+        <p>
+          A browser lab bench for Docker: you type real-shaped <C>docker</C> commands and watch
+          image layers, containers, volumes, and networks move. No install required for the
+          tutorial core. Real daemon work is Track B on your computer (web limits — see Setup).
+        </p>
+
+        <h3 className="intro-h3">Publisher</h3>
+        <p>
+          Published and maintained by <strong>Ali Sadeghi Aghili</strong> — programmer, data
+          engineer / scientist, ML engineer.{' '}
+          <a href={LINKTR} target="_blank" rel="noopener noreferrer">
+            linktr.ee/aliaghili
+          </a>
+        </p>
+
+        <ul className="intro-links">
+          <li>
+            <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
+              GitHub — source &amp; issues
+            </a>
+          </li>
+        </ul>
+
+        <p>Buy Me a Coffee (supports the publisher):</p>
+        <p>
+          <a className="coffee-btn" href={COFFEE_URL} target="_blank" rel="noopener noreferrer">
+            Buy me a coffee
+          </a>
+        </p>
+
+        <p className="intro-toolbar">
+          Toolbar: <strong>Lesson</strong> (replay level intro) · <strong>GitHub</strong> ·{' '}
+          <strong>Buy me a coffee</strong>.
+        </p>
+
         <div className="modal-actions">
           <button type="button" onClick={onClose}>
             Sandbox
           </button>
           <button
             type="button"
-            className="primary"
+            className="primary intro-cta"
             onClick={() => {
               onOpenLevels();
               onClose();
             }}
           >
-            Start first level
+            Open levels
           </button>
         </div>
       </div>
@@ -144,8 +209,9 @@ export function HelpDialog({ open, onClose }: { open: boolean; onClose: () => vo
           steps — the glowing orange one is what to do next.
         </p>
         <p>
-          In level mode, meeting the win condition records your command count and unlocks share
-          links with your learning list.
+          <strong>Track A</strong> (this site): mental models. <strong>Track B</strong> (your
+          computer): install Docker, run <code>labs/run-all.ps1</code> — the web cannot start a
+          real daemon.
         </p>
         <div className="modal-actions">
           <button type="button" className="primary" onClick={onClose}>
