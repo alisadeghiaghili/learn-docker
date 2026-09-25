@@ -4,6 +4,8 @@ import { BrandMark } from './BrandMark';
 const REPO_URL = 'https://github.com/alisadeghiaghili/learn-docker';
 const COFFEE_URL = 'https://www.buymeacoffee.com/alisadeghil';
 const LINKTR = 'https://linktr.ee/aliaghili';
+const COFFEE_BTN_IMG =
+  'https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=alisadeghil&button_colour=2a3a4a&font_colour=ffffff&font_family=Cookie&outline_colour=ffffff&coffee_colour=FFDD00';
 
 function C({ children }: { children: string }) {
   return <code className="chip-cmd">{children}</code>;
@@ -158,8 +160,14 @@ export function IntroDialog({
 
         <p>Buy Me a Coffee (supports the publisher):</p>
         <p>
-          <a className="coffee-btn" href={COFFEE_URL} target="_blank" rel="noopener noreferrer">
-            Buy me a coffee
+          <a
+            className="coffee-btn"
+            href={COFFEE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Buy me a coffee"
+          >
+            <img src={COFFEE_BTN_IMG} alt="Buy me a coffee" height={40} />
           </a>
         </p>
 
