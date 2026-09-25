@@ -382,6 +382,19 @@ describe('level solutions', () => {
     expect(install?.teaching).toMatch(/WSL/);
   });
 
+  it('mastery map encodes UI caps vs 90% protocol', async () => {
+    const { MASTERY, masteryScore, PROTOCOL_90 } = await import('../engine/mastery');
+    expect(MASTERY.length).toBeGreaterThanOrEqual(8);
+    for (const d of MASTERY) {
+      expect(d.uiOnlyCap).toBeLessThan(d.fullProtocolTarget);
+      expect(d.fullProtocolTarget).toBeGreaterThanOrEqual(90);
+      expect(d.checks.length).toBeGreaterThanOrEqual(2);
+    }
+    expect(MASTERY.find((d) => d.id === 'debug')?.uiOnlyCap).toBeLessThan(60);
+    expect(PROTOCOL_90.length).toBeGreaterThanOrEqual(5);
+    expect(masteryScore({}).overall).toBe(0);
+  });
+
   it('assessment bank has rubric + spaced review depth', async () => {
     const { RUBRIC_QUESTIONS, SPACED_REVIEW, reviewDue } = await import('../engine/assessment');
     expect(RUBRIC_QUESTIONS.length).toBeGreaterThanOrEqual(12);

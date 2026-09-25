@@ -18,6 +18,7 @@ import {
 } from '../engine/session';
 import { QUIZ_BANK, quizzesForLevel, quizByIndex } from '../levels';
 import { RUBRIC_QUESTIONS, reviewDue } from '../engine/assessment';
+import { MASTERY, protocolText } from '../engine/mastery';
 import type { LogLine } from './Terminal';
 
 export type AppMode = 'sandbox' | 'level';
@@ -379,8 +380,63 @@ function handleSubmit(state: AppState, rawInput: string): AppState {
       focusToken,
     };
   }
-  if (input === 'quiz' || input.startsWith('quiz ') || input === 'checkpoint' || input === 'review' || input === 'rubric' || input.startsWith('rubric ')) {
+  if (
+    input === 'quiz' ||
+    input.startsWith('quiz ') ||
+    input === 'checkpoint' ||
+    input === 'review' ||
+    input === 'rubric' ||
+    input.startsWith('rubric ') ||
+    input === 'mastery' ||
+    input.startsWith('mastery ')
+  ) {
     const level = currentLevel(state);
+    if (input === 'mastery' || input.startsWith('mastery ')) {
+      const arg = input.slice(7).trim();
+      if (!arg) {
+        return {
+          ...state,
+          lines: pushLines(
+            [...state.lines, lineIn],
+            [
+              'Mastery map (target = full protocol, not UI-only)',
+              ...MASTERY.map(
+                (d) =>
+                  `${d.title}\n  UI-only cap ${d.uiOnlyCap}% · full protocol target ${d.fullProtocolTarget}% · ${d.checks.length} checks`,
+              ),
+              '',
+              'Commands: mastery <domain>  e.g. mastery debug',
+              'Protocol for 90%:',
+              protocolText(),
+            ],
+            'out',
+          ),
+          focusToken,
+        };
+      }
+      const domain = MASTERY.find((d) => d.id === arg || d.title.toLowerCase().includes(arg));
+      if (!domain) {
+        return {
+          ...state,
+          lines: pushLines([...state.lines, lineIn], ['Unknown domain. Try: mastery models|commands|build|compose|network|volumes|debug|registry|security'], 'err'),
+          focusToken,
+        };
+      }
+      return {
+        ...state,
+        lines: pushLines(
+          [...state.lines, lineIn],
+          [
+            `Mastery: ${domain.title}`,
+            ...domain.checks.map((c) => `  [ ] ${c.id} ${c.prompt}\n      evidence: ${c.evidence.join(', ')}\n      probe: ${c.probe}`),
+            '',
+            `UI-only cap ${domain.uiOnlyCap}% — 90% needs Track B + teach-back.`,
+          ],
+          'out',
+        ),
+        focusToken,
+      };
+    }
     if (input === 'review') {
       const items = reviewDue(Object.keys(state.progress.levels).filter((id) => state.progress.levels[id]?.solved).length);
       return {
