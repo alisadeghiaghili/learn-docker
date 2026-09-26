@@ -21,6 +21,7 @@ type NavAction =
   | 'rubric'
   | 'review'
   | 'mastery'
+  | 'quiz'
   | 'undo'
   | 'reset'
   | 'sandbox'
@@ -69,6 +70,7 @@ export default function App() {
       case 'rubric':
       case 'review':
       case 'mastery':
+      case 'quiz':
         dispatch({ type: 'SUBMIT', input: action });
         break;
       case 'lesson':
@@ -103,43 +105,81 @@ export default function App() {
           </span>
         </div>
 
-        <div className="toolbar-actions">
+        <div className="toolbar-actions tb-row">
           <button type="button" className="tb-btn primary" onClick={() => runNav('levels')}>
             Levels
           </button>
-          <button type="button" className="tb-btn" onClick={() => runNav('hint')} title="Hint">
+          <button type="button" className="tb-btn" onClick={() => runNav('lesson')}>
+            Lesson
+          </button>
+          <button type="button" className="tb-btn" onClick={() => runNav('steps')}>
+            Guide
+          </button>
+          <button type="button" className="tb-btn" onClick={() => runNav('hint')}>
             Hint
           </button>
-          <button type="button" className="tb-btn ghost" onClick={() => runNav('help')} aria-label="Help">
+          <button type="button" className="tb-btn" onClick={() => runNav('curriculum')}>
+            Solution
+          </button>
+          <button
+            type="button"
+            className="tb-btn"
+            onClick={() => runNav('undo')}
+            disabled={state.historyStack.length === 0}
+          >
+            Undo
+          </button>
+          <button type="button" className="tb-btn" onClick={() => runNav('reset')}>
+            Reset
+          </button>
+          <button type="button" className="tb-btn" onClick={() => runNav('sandbox')}>
+            Sandbox
+          </button>
+          <button
+            type="button"
+            className="tb-btn tb-icon"
+            onClick={() => runNav('help')}
+            aria-label="Help"
+            title="Help"
+          >
             ?
           </button>
+          <a
+            className="tb-btn tb-icon"
+            href="https://github.com/alisadeghiaghili/learn-docker"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="GitHub"
+            aria-label="GitHub"
+          >
+            <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+              />
+            </svg>
+          </a>
+          <a
+            className="tb-btn tb-coffee"
+            href="https://www.buymeacoffee.com/alisadeghil"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Buy me a coffee"
+          >
+            Buy me a coffee
+          </a>
           <button
             type="button"
             className={`tb-btn nav-toggle${navOpen ? ' is-open' : ''}`}
             aria-expanded={navOpen}
             aria-controls="nav-drawer"
-            aria-label="Menu"
+            aria-label="More menu"
             onClick={() => setNavOpen((v) => !v)}
           >
             <span className="nav-bars" aria-hidden="true" />
           </button>
           {navOpen && (
             <div className="nav-drawer" id="nav-drawer" role="menu">
-              <button type="button" role="menuitem" onClick={() => runNav('levels')}>
-                Levels
-              </button>
-              <button type="button" role="menuitem" onClick={() => runNav('lesson')}>
-                Lesson text
-              </button>
-              <button type="button" role="menuitem" onClick={() => runNav('hint')}>
-                Hint
-              </button>
-              <button type="button" role="menuitem" onClick={() => runNav('steps')}>
-                Steps
-              </button>
-              <button type="button" role="menuitem" onClick={() => runNav('curriculum')}>
-                Outcomes
-              </button>
               <button type="button" role="menuitem" onClick={() => runNav('mastery')}>
                 Mastery map
               </button>
@@ -149,16 +189,10 @@ export default function App() {
               <button type="button" role="menuitem" onClick={() => runNav('review')}>
                 Spaced review
               </button>
+              <button type="button" role="menuitem" onClick={() => runNav('quiz')}>
+                Quiz
+              </button>
               <hr />
-              <button type="button" role="menuitem" onClick={() => runNav('undo')}>
-                Undo
-              </button>
-              <button type="button" role="menuitem" onClick={() => runNav('reset')}>
-                Reset
-              </button>
-              <button type="button" role="menuitem" onClick={() => runNav('sandbox')}>
-                Sandbox
-              </button>
               <button type="button" role="menuitem" onClick={() => runNav('help')}>
                 Help & tracks
               </button>
